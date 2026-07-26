@@ -1,0 +1,9 @@
+[
+    {
+        "id": 1,
+        "menu": "Login",
+        "title": "Login",
+        "icon": "LoginOutlined",
+        "link": "/login"
+    }
+]

@@ -1,0 +1,22 @@
+[
+    {
+        "id": 2,
+        "name": "Dashboard",
+        "link": "/"
+    },
+    {
+        "id": 3,
+        "name": "Pages",
+        "link": "/pages"
+    },
+    {
+        "id": 4,
+        "name": "Blogs",
+        "link": "/blogs"
+    },
+    {
+        "id": 5,
+        "name": "MAVE AI",
+        "link": "/build-with-ai"
+    }
+]
