@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from "react";
 import instance from "../axios";
-import { cachedApiCall } from "../utils/apiUtils";
+import { cachedApiCall, invalidateCache } from "../utils/apiUtils";
+import { fetchPagesList } from "../utils/pagesApi";
+import { unwrapApiPayload } from "../utils/normalizeApiList";
 import CounterCards from "../components/dashboard/CounterCards";
 import UserStat from "../components/dashboard/UserStat";
 import SiteStat from "../components/dashboard/SiteStat";
@@ -34,37 +36,37 @@ const Index = () => {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const safe = (p) => p.catch(() => ({ data: [] }));
+      const safeList = (p) => p.catch(() => []);
 
       const [
         pages_r, media_r, menus_r, navbars_r,
         sliders_r, cards_r, forms_r, footers_r,
         users_r,
       ] = await Promise.all([
-        safe(cachedApiCall("pages",        () => instance.get("/pages"))),
-        safe(cachedApiCall("media",        () => instance.get("/media"))),
-        safe(cachedApiCall("menus",        () => instance.get("/menus"))),
-        safe(cachedApiCall("navbars",      () => instance.get("/navbars"))),
-        safe(cachedApiCall("sliders",      () => instance.get("/sliders"))),
-        safe(cachedApiCall("cards",        () => instance.get("/cards"))),
-        safe(cachedApiCall("forms",        () => instance.get("/forms"))),
-        safe(cachedApiCall("footers",      () => instance.get("/footers"))),
-        safe(cachedApiCall("admin-users",  () => instance.get("/admin/users"))),
+        safeList(cachedApiCall("pages", () => fetchPagesList())),
+        safeList(cachedApiCall("media", () => instance.get("/media"))),
+        safeList(cachedApiCall("menus", () => instance.get("/menus"))),
+        safeList(cachedApiCall("navbars", () => instance.get("/navbars"))),
+        safeList(cachedApiCall("sliders", () => instance.get("/sliders"))),
+        safeList(cachedApiCall("cards", () => instance.get("/cards"))),
+        safeList(cachedApiCall("forms", () => instance.get("/forms"))),
+        safeList(cachedApiCall("footers", () => instance.get("/footers"))),
+        safeList(cachedApiCall("admin-users", () => instance.get("/admin/users"))),
       ]);
 
-      const allPages = Array.isArray(pages_r.data) ? pages_r.data : [];
+      const allPages = unwrapApiPayload(pages_r);
 
       setData({
-        pages:   allPages.filter(p => p.type === "Page" || p.type === "Subpage"),
-        blogs:   allPages.filter(p => p.type === "Blog"),
-        media:   media_r.data,
-        menus:   menus_r.data,
-        navbars: navbars_r.data,
-        sliders: sliders_r.data,
-        cards:   cards_r.data,
-        forms:   forms_r.data,
-        footers: footers_r.data,
-        users:   users_r.data,
+        pages: allPages.filter((p) => p.type === "Page" || p.type === "Subpage"),
+        blogs: allPages.filter((p) => p.type === "Blog"),
+        media: unwrapApiPayload(media_r),
+        menus: unwrapApiPayload(menus_r),
+        navbars: unwrapApiPayload(navbars_r),
+        sliders: unwrapApiPayload(sliders_r),
+        cards: unwrapApiPayload(cards_r),
+        forms: unwrapApiPayload(forms_r),
+        footers: unwrapApiPayload(footers_r),
+        users: unwrapApiPayload(users_r),
       });
       setLoading(false);
     } catch (error) {
@@ -74,6 +76,17 @@ const Index = () => {
   };
 
   useEffect(() => {
+    [
+      "pages",
+      "media",
+      "menus",
+      "navbars",
+      "sliders",
+      "cards",
+      "forms",
+      "footers",
+      "admin-users",
+    ].forEach(invalidateCache);
     fetchData();
     const stored = localStorage.getItem("user");
     setUserData(stored ? JSON.parse(stored) : null);

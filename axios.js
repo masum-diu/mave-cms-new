@@ -60,13 +60,20 @@ export const setLocalTenantSlug = (slug) => {
   }
 };
 
+const RESERVED_SUBDOMAINS = new Set(["cms", "www", "admin", "api"]);
+
+const normalizeBaseUrl = (url) => {
+  if (!url) return url;
+  return url.replace(/\/pages\/?$/i, "");
+};
+
 const getTenantApiBaseUrl = () => {
   const apiHost = process.env.NEXT_PUBLIC_API_HOST;
-  const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
+  const baseUrl = normalizeBaseUrl(process.env.NEXT_PUBLIC_API_BASE_URL);
 
   if (typeof window === "undefined") {
     const slug = process.env.NEXT_PUBLIC_TENANT_SLUG;
-    if (slug && apiHost) return `${apiHost}/${slug}/api`;
+    if (slug && apiHost) return normalizeBaseUrl(`${apiHost}/${slug}/api`);
     return baseUrl;
   }
 
@@ -75,12 +82,14 @@ const getTenantApiBaseUrl = () => {
 
   // Saved org slug (local Organization Login or production shared CMS URL)
   if (storedSlug && apiHost) {
-    return `${apiHost}/${storedSlug}/api`;
+    return normalizeBaseUrl(`${apiHost}/${storedSlug}/api`);
   }
 
   if (!isLocalHostname(hostname)) {
     const slug = hostname.split(".")[0];
-    return `${apiHost}/${slug}/api`;
+    if (slug && !RESERVED_SUBDOMAINS.has(slug.toLowerCase()) && apiHost) {
+      return normalizeBaseUrl(`${apiHost}/${slug}/api`);
+    }
   }
 
   return baseUrl;

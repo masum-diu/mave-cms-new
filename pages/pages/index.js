@@ -4,6 +4,7 @@ import { message, Spin } from "antd";
 import React, { useState, useEffect, useMemo } from "react";
 import instance from "../../axios";
 import { cachedApiCall } from "../../utils/apiUtils";
+import { fetchPagesList } from "../../utils/pagesApi";
 import { useRouter } from "next/router";
 import PagesHeader from "../../components/PageBuilder/PagesHeader";
 import CreatePageModal from "../../components/PageBuilder/CreatePageModal";
@@ -29,26 +30,25 @@ const Pages = () => {
   const fetchPages = async () => {
     try {
       setLoading(true);
-      const response = await cachedApiCall("pages", () => instance.get("/pages"));
-      if (response.data) {
-        setAllPages(response.data);
-        const mainPages = response.data.filter((page) => page.type === "Page");
-        const subPages = response.data.filter(
-          (page) => page.type === "Subpage"
-        );
-
-        const footers = response.data.filter((page) => page.type === "Footer");
-        setTypePages(mainPages);
-        setTypeSubpages(subPages);
-        setTypeFooters(footers);
-        setLoading(false);
-      } else {
-        message.error("Failed to fetch pages.");
-        setLoading(false);
-      }
+      const data = await cachedApiCall("pages", () => fetchPagesList());
+      setAllPages(data);
+      const mainPages = data.filter((page) => page.type === "Page");
+      const subPages = data.filter((page) => page.type === "Subpage");
+      const footers = data.filter((page) => page.type === "Footer");
+      setTypePages(mainPages);
+      setTypeSubpages(subPages);
+      setTypeFooters(footers);
     } catch (error) {
       console.error("Error fetching pages:", error);
-      message.error("An error occurred while fetching pages.");
+      const status = error?.response?.status;
+      if (status === 404) {
+        message.warning(
+          "Pages API not found. Check Organization Login slug and API URL in .env."
+        );
+      } else {
+        message.error("An error occurred while fetching pages.");
+      }
+    } finally {
       setLoading(false);
     }
   };
