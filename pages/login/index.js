@@ -15,7 +15,6 @@ import { useRouter } from "next/router";
 import { useAuth } from "../../src/context/AuthContext";
 import Loader from "../../components/Loader";
 import {
-  isLocalHostname,
   isTenantLoginEnabled,
   setLocalTenantSlug,
   setTenantLoginEnabled,
@@ -27,24 +26,20 @@ export default function Login() {
   const router = useRouter();
   const { callback } = router.query;
   const [form] = Form.useForm();
-  const [isLocal, setIsLocal] = useState(false);
   const [tenantLoginOn, setTenantLoginOn] = useState(false);
+  const showOrgLogin = true;
 
   useEffect(() => {
     if (typeof window !== "undefined") {
-      const local = isLocalHostname(window.location.hostname);
-      setIsLocal(local);
-      if (local) {
-        const enabled = isTenantLoginEnabled();
-        setTenantLoginOn(enabled);
-        if (enabled) {
-          const savedSlug =
-            localStorage.getItem(TENANT_SLUG_KEY) ||
-            process.env.NEXT_PUBLIC_TENANT_SLUG ||
-            "";
-          if (savedSlug) {
-            form.setFieldsValue({ tenant_slug: savedSlug });
-          }
+      const enabled = isTenantLoginEnabled();
+      setTenantLoginOn(enabled);
+      if (enabled) {
+        const savedSlug =
+          localStorage.getItem(TENANT_SLUG_KEY) ||
+          process.env.NEXT_PUBLIC_TENANT_SLUG ||
+          "";
+        if (savedSlug) {
+          form.setFieldsValue({ tenant_slug: savedSlug });
         }
       }
     }
@@ -56,7 +51,7 @@ export default function Login() {
       message.error("Please fill in all fields");
       return;
     }
-    if (isLocal && tenantLoginOn && !tenant_slug?.trim()) {
+    if (tenantLoginOn && !tenant_slug?.trim()) {
       message.error("Please enter organization slug");
       return;
     }
@@ -64,7 +59,7 @@ export default function Login() {
       email,
       password,
       callback,
-      isLocal && tenantLoginOn ? tenant_slug : ""
+      tenantLoginOn ? tenant_slug : ""
     );
   };
 
@@ -195,7 +190,7 @@ export default function Login() {
                   }
                 />
               </Form.Item>
-              {isLocal && (
+              {showOrgLogin && (
                 <div className="flex items-center justify-between mb-4 px-1">
                   <div>
                     <span className="text-[#383838] text-sm font-medium block">
@@ -208,7 +203,7 @@ export default function Login() {
                   <Switch checked={tenantLoginOn} onChange={handleTenantSwitch} />
                 </div>
               )}
-              {isLocal && tenantLoginOn && (
+              {showOrgLogin && tenantLoginOn && (
                 <Form.Item
                   name="tenant_slug"
                   rules={[

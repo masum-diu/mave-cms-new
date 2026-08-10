@@ -71,14 +71,15 @@ const getTenantApiBaseUrl = () => {
   }
 
   const hostname = window.location.hostname;
+  const storedSlug = getLocalTenantSlug();
+
+  // Saved org slug (local Organization Login or production shared CMS URL)
+  if (storedSlug && apiHost) {
+    return `${apiHost}/${storedSlug}/api`;
+  }
 
   if (!isLocalHostname(hostname)) {
     const slug = hostname.split(".")[0];
-    return `${apiHost}/${slug}/api`;
-  }
-
-  const slug = getLocalTenantSlug();
-  if (slug && apiHost) {
     return `${apiHost}/${slug}/api`;
   }
 
@@ -152,6 +153,8 @@ instance.interceptors.response.use(
     if (error.response && error.response.status === 401) {
       localStorage.removeItem("token");
       localStorage.removeItem("user");
+      localStorage.setItem(TENANT_LOGIN_ENABLED_KEY, "false");
+      localStorage.removeItem(TENANT_SLUG_KEY);
 
       if (
         typeof window !== "undefined" &&
@@ -189,6 +192,8 @@ instance.interceptors.response.use(
 instance.logout = (redirectUrl = "/login") => {
   localStorage.removeItem("token");
   localStorage.removeItem("user");
+  localStorage.setItem(TENANT_LOGIN_ENABLED_KEY, "false");
+  localStorage.removeItem(TENANT_SLUG_KEY);
   if (typeof window !== "undefined") {
     window.location.href = redirectUrl;
   }

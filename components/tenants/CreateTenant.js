@@ -2,17 +2,11 @@ import { useState } from "react";
 import { Form, Input, Button, message, Divider, Collapse, Checkbox } from "antd";
 
 const getApiHost = () => {
-  // Production: use NEXT_PUBLIC_API_HOST directly
   if (process.env.NEXT_PUBLIC_API_HOST) {
     return process.env.NEXT_PUBLIC_API_HOST;
   }
-  // Local fallback: extract host from base URL
   const base = process.env.NEXT_PUBLIC_API_BASE_URL || "";
   return base.split("/").slice(0, 3).join("/");
-};
-
-const getTenantRegisterUrl = () => {
-  return `${process.env.NEXT_PUBLIC_API_BASE_URL}/tenants/register`;
 };
 
 export default function CreateTenant({ onSuccess }) {
@@ -39,8 +33,8 @@ export default function CreateTenant({ onSuccess }) {
       if (values.db_username) tenantPayload.db_username = values.db_username;
       if (values.db_password) tenantPayload.db_password = values.db_password;
 
-      // Step 1: Create tenant + DB + migrate
-      const tenantRes = await fetch(getTenantRegisterUrl(), {
+      // Step 1: Create tenant + DB + migrate (via Next.js proxy — avoids CORS)
+      const tenantRes = await fetch("/api/tenants/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(tenantPayload),

@@ -5,7 +5,6 @@ import { useRouter } from "next/router";
 import instance, {
   setLocalTenantSlug,
   setTenantLoginEnabled,
-  isLocalHostname,
   getTenantApiBaseUrl,
 } from "../../axios";
 import { message } from "antd";
@@ -71,6 +70,7 @@ export const AuthProvider = ({ children }) => {
       if (storedToken && storedUser) {
         try {
           const parsedUser = JSON.parse(storedUser);
+          instance.defaults.baseURL = getTenantApiBaseUrl();
           dispatch({
             type: "INITIALIZE",
             payload: {
@@ -112,10 +112,7 @@ export const AuthProvider = ({ children }) => {
     try {
       dispatch({ type: "SET_LOADING", payload: true });
 
-      if (
-        typeof window !== "undefined" &&
-        isLocalHostname(window.location.hostname)
-      ) {
+      if (typeof window !== "undefined") {
         const slug = (tenantSlug || "").trim();
         const useTenantLogin = !!slug;
         setTenantLoginEnabled(useTenantLogin);
@@ -167,11 +164,12 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = () => {
-    // Remove token and user from localStorage
     localStorage.removeItem("token");
     localStorage.removeItem("user");
+    setTenantLoginEnabled(false);
+    setLocalTenantSlug("");
+    instance.defaults.baseURL = getTenantApiBaseUrl();
 
-    // Dispatch logout
     dispatch({ type: "LOGOUT" });
 
     message.success("Logged out successfully!");

@@ -13,7 +13,7 @@ export default function TenantTable({ tenants, loading, onRefresh }) {
   const [viewTenant, setViewTenant]     = useState(null);
   const [users, setUsers]               = useState([]);
   const [usersLoading, setUsersLoading] = useState(false);
-console.log("Rendering TenantTable with tenants:", users);
+
   const handleDelete = async (id) => {
     setDeletingId(id);
     try {
