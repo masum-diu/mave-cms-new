@@ -1,6 +1,6 @@
 // components/PageBuilder/Components/TestimonialComponent/TestimonialComponent.jsx
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { Button, Form, message, Typography, Space, Popconfirm } from "antd";
 import {
   PlusOutlined,
@@ -41,29 +41,24 @@ const TestimonialComponent = ({
   const [form] = Form.useForm();
   const [editForm] = Form.useForm();
 
-  useEffect(() => {
-    if (isEditMode) {
-      updateComponent({
-        ...component,
-        _mave: {
-          testimonials,
-          layout,
-          font,
-          color,
-          background,
-        },
-      });
-    }
-  }, [
-    isEditMode,
-    testimonials,
-    layout,
-    font,
-    color,
-    background,
-    updateComponent,
-    component,
-  ]);
+  const componentRef = React.useRef(component);
+  componentRef.current = component;
+  const updateComponentRef = React.useRef(updateComponent);
+  updateComponentRef.current = updateComponent;
+
+  const syncComponent = (overrides = {}) => {
+    updateComponentRef.current({
+      ...componentRef.current,
+      _mave: {
+        testimonials,
+        layout,
+        font,
+        color,
+        background,
+        ...overrides,
+      },
+    });
+  };
 
   const handleAddTestimonial = () => {
     if (!preview && isEditMode) {
@@ -81,7 +76,9 @@ const TestimonialComponent = ({
       rating: values.rating,
       image: selectedImage,
     };
-    setTestimonials([...testimonials, newTestimonial]);
+    const updatedTestimonials = [...testimonials, newTestimonial];
+    setTestimonials(updatedTestimonials);
+    syncComponent({ testimonials: updatedTestimonials });
     setIsAdding(false);
     setSelectedImage(null);
     form.resetFields();
@@ -110,11 +107,11 @@ const TestimonialComponent = ({
       rating: values.rating,
       image: selectedImage,
     };
-    setTestimonials(
-      testimonials.map((t) =>
-        t.id === updatedTestimonial.id ? updatedTestimonial : t
-      )
+    const updatedTestimonials = testimonials.map((t) =>
+      t.id === updatedTestimonial.id ? updatedTestimonial : t
     );
+    setTestimonials(updatedTestimonials);
+    syncComponent({ testimonials: updatedTestimonials });
     setIsEditing(false);
     setCurrentEdit(null);
     setSelectedImage(null);
@@ -124,7 +121,9 @@ const TestimonialComponent = ({
 
   const handleDeleteTestimonial = (id) => {
     if (!preview && isEditMode) {
-      setTestimonials(testimonials.filter((t) => t.id !== id));
+      const updatedTestimonials = testimonials.filter((t) => t.id !== id);
+      setTestimonials(updatedTestimonials);
+      syncComponent({ testimonials: updatedTestimonials });
       message.success("Testimonial deleted successfully.");
     }
   };
@@ -138,16 +137,7 @@ const TestimonialComponent = ({
   const handleEditModeToggle = () => {
     if (isEditMode) {
       // Save changes when exiting edit mode
-      updateComponent({
-        ...component,
-        _mave: {
-          testimonials,
-          layout,
-          font,
-          color,
-          background,
-        },
-      });
+      syncComponent();
     }
     setIsEditMode(!isEditMode);
   };
