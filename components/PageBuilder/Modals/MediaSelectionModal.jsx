@@ -84,10 +84,15 @@ const MediaSelectionModal = (props) => {
 
   useEffect(() => {
     if (isVisible) {
-      setSelectedMedia(initialSelectedMedia);
+      const initial = Array.isArray(initialSelectedMedia)
+        ? initialSelectedMedia
+        : [];
+      setSelectedMedia(initial);
+      selectedMediaRef.current = initial;
+      setStableSelectedMedia(initial);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isVisible]);
+  }, [isVisible, initialSelectedMedia]);
 
   // Debug: Track selectedMedia changes
   // useEffect(() => {

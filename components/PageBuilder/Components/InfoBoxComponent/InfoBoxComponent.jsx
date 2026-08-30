@@ -1,7 +1,7 @@
 // components/PageBuilder/Components/InfoBoxComponent/InfoBoxComponent.jsx
 
-import React, { useState, useEffect } from "react";
-import { Button, Space, Form, message, Popconfirm, Input, Switch } from "antd";
+import React, { useState } from "react";
+import { Button, Space, Form, message, Popconfirm, Collapse } from "antd";
 import {
   PlusOutlined,
   MinusOutlined,
@@ -11,11 +11,44 @@ import {
   CopyFilled,
 } from "@ant-design/icons";
 import Image from "next/image";
-import InfoBoxItem from "./InfoBoxItem";
 import MediaSelectionModal from "../../Modals/MediaSelectionModal";
 import ConfigSection from "./ConfigSection";
 import MainContentSection from "./MainContentSection";
 import AddInfoItemForm from "./AddInfoItemForm";
+
+const { Panel } = Collapse;
+
+const emptyItemFields = () => ({
+  title: "",
+  description: "",
+  secondTitle: "",
+  secondDescription: "",
+  altTitle: "",
+  altDescription: "",
+});
+
+const normalizeInfoBox = (mave = {}) => ({
+  title: mave.title || "",
+  description: mave.description || "",
+  secondTitle: mave.secondTitle || "",
+  secondDescription: mave.secondDescription || "",
+  altTitle: mave.altTitle || "",
+  altDescription: mave.altDescription || "",
+  media: Array.isArray(mave.media) ? mave.media : [],
+  infoItems: Array.isArray(mave.infoItems)
+    ? mave.infoItems.map((item) => ({
+        id: item.id || Date.now() + Math.random(),
+        title: item.title || "",
+        description: item.description || "",
+        secondTitle: item.secondTitle || "",
+        secondDescription: item.secondDescription || "",
+        altTitle: item.altTitle || "",
+        altDescription: item.altDescription || "",
+        link: item.link || "",
+        media: Array.isArray(item.media) ? item.media : [],
+      }))
+    : [],
+});
 
 const InfoBoxComponent = ({
   component,
@@ -24,15 +57,13 @@ const InfoBoxComponent = ({
   preview = false,
   onDuplicateElement,
 }) => {
-  const [infoBox, setInfoBox] = useState({
-    title: component._mave?.title || "",
-    description: component._mave?.description || "",
-    media: component._mave?.media || [],
-    infoItems: component._mave?.infoItems || [],
-  });
+  const [infoBox, setInfoBox] = useState(() =>
+    normalizeInfoBox(component._mave)
+  );
   const [isEditMode, setIsEditMode] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingItemId, setEditingItemId] = useState(null);
+  const [formKey, setFormKey] = useState(0);
   const [layout, setLayout] = useState(component._mave?.layout || "horizontal");
   const [font, setFont] = useState(component._mave?.font || "Arial");
   const [color, setColor] = useState(component._mave?.color || "#000000");
@@ -42,188 +73,257 @@ const InfoBoxComponent = ({
   const [isMediaModalVisible, setIsMediaModalVisible] = useState(false);
   const [selectedMedia, setSelectedMedia] = useState([]);
   const [mediaSelectionMode, setMediaSelectionMode] = useState("multiple");
+  const [mediaTarget, setMediaTarget] = useState("main");
   const [showAdvanced, setShowAdvanced] = useState(false);
 
   const [form] = Form.useForm();
   const [editForm] = Form.useForm();
 
-  useEffect(() => {
-    // Only update if we're in edit mode
-    if (isEditMode) {
-      updateComponent({
-        ...component,
-        _mave: {
-          ...infoBox,
-          layout,
-          font,
-          color,
-          background,
-        },
-      });
-    }
-  }, [
-    isEditMode,
-    infoBox,
-    layout,
-    font,
-    color,
-    background,
-    updateComponent,
-    component,
-  ]);
+  const infoItems = Array.isArray(infoBox.infoItems) ? infoBox.infoItems : [];
+  const mediaList = Array.isArray(infoBox.media) ? infoBox.media : [];
 
-  // Handle media selection
-  const handleSelectMedia = (media) => {
-    const mediaArray = Array.isArray(media) ? media : [media];
-    setSelectedMedia(mediaArray);
-    setIsMediaModalVisible(false);
-  };
-
-  // Handle main media selection
-  const handleMainMediaSelect = (media) => {
-    const mediaArray = Array.isArray(media) ? media : [media];
-    setInfoBox((prevInfoBox) => ({
-      ...prevInfoBox,
-      media: mediaArray,
-    }));
-    setIsMediaModalVisible(false);
-    message.success("Main media updated successfully.");
-  };
-
-  // Handle add info item submit
-  const handleAddSubmit = (values) => {
-    const newInfoItem = {
-      id: Date.now(),
-      title: values.title,
-      description: values.description,
-      link: values.link,
-      media: selectedMedia,
-    };
-    setInfoBox({
-      ...infoBox,
-      infoItems: [...infoBox.infoItems, newInfoItem],
+  const persist = (nextInfoBox, nextLayout = layout) => {
+    updateComponent({
+      ...component,
+      _mave: {
+        ...nextInfoBox,
+        infoItems: Array.isArray(nextInfoBox.infoItems)
+          ? nextInfoBox.infoItems
+          : [],
+        media: Array.isArray(nextInfoBox.media) ? nextInfoBox.media : [],
+        layout: nextLayout,
+        font,
+        color,
+        background,
+      },
     });
-    form.resetFields();
-    setSelectedMedia([]);
-    setShowAddForm(false);
-    message.success("Info item added successfully.");
   };
 
-  // Handle edit info item
+  const openMediaModal = (mode, target = "main") => {
+    setMediaSelectionMode(mode);
+    setMediaTarget(target);
+    if (target === "item") {
+      setSelectedMedia([]);
+    }
+    setIsMediaModalVisible(true);
+  };
+
+  const handleMediaSelected = (media) => {
+    const mediaArray = Array.isArray(media) ? media : media ? [media] : [];
+    setIsMediaModalVisible(false);
+
+    if (mediaTarget === "main") {
+      setInfoBox((prev) => ({ ...prev, media: mediaArray }));
+      message.success("Main media updated.");
+      return;
+    }
+
+    setSelectedMedia(mediaArray);
+    message.success("Item media selected.");
+  };
+
+  const getInitialMediaForModal = () => {
+    if (mediaTarget === "main") return mediaList;
+    return Array.isArray(selectedMedia) ? selectedMedia : [];
+  };
+
+  const buildItemFromValues = (values, id) => ({
+    id,
+    title: values.title || "",
+    description: values.description || "",
+    secondTitle: values.secondTitle || "",
+    secondDescription: values.secondDescription || "",
+    altTitle: values.altTitle || "",
+    altDescription: values.altDescription || "",
+    link: values.link || "",
+    media: Array.isArray(selectedMedia) ? selectedMedia : [],
+  });
+
+  const handleAddSubmit = (values) => {
+    const newInfoItem = buildItemFromValues(values, Date.now());
+    const next = {
+      ...infoBox,
+      infoItems: [...infoItems, newInfoItem],
+    };
+    setInfoBox(next);
+    persist(next);
+    form.resetFields();
+    form.setFieldsValue(emptyItemFields());
+    setSelectedMedia([]);
+    setFormKey((k) => k + 1);
+    setShowAddForm(true);
+    message.success(`Info item #${next.infoItems.length} added. Add another below.`);
+  };
+
   const handleEditInfoItem = (item) => {
     setEditingItemId(item.id);
+    setShowAddForm(false);
     editForm.setFieldsValue({
       title: item.title,
       description: item.description,
+      secondTitle: item.secondTitle,
+      secondDescription: item.secondDescription,
+      altTitle: item.altTitle,
+      altDescription: item.altDescription,
       link: item.link,
     });
-    setSelectedMedia(item.media);
+    setSelectedMedia(Array.isArray(item.media) ? item.media : []);
+    setFormKey((k) => k + 1);
   };
 
-  // Handle edit submit
   const handleEditSubmit = (values) => {
-    const updatedItem = {
-      id: editingItemId,
-      title: values.title,
-      description: values.description,
-      link: values.link,
-      media: selectedMedia,
-    };
-    setInfoBox({
+    const updatedItem = buildItemFromValues(values, editingItemId);
+    const next = {
       ...infoBox,
-      infoItems: infoBox.infoItems.map((item) =>
-        item.id === updatedItem.id ? updatedItem : item
+      infoItems: infoItems.map((item) =>
+        item.id === editingItemId ? updatedItem : item
       ),
-    });
+    };
+    setInfoBox(next);
+    persist(next);
     setEditingItemId(null);
     setSelectedMedia([]);
-    message.success("Info item updated successfully.");
+    message.success("Info item updated.");
   };
 
-  // Handle cancel edit
-  const handleCancelEdit = () => {
+  const handleCancelItemEdit = () => {
     setEditingItemId(null);
     setSelectedMedia([]);
     editForm.resetFields();
   };
 
-  // Handle delete info item
   const handleDeleteInfoItem = (id) => {
-    setInfoBox({
+    const next = {
       ...infoBox,
-      infoItems: infoBox.infoItems.filter((item) => item.id !== id),
-    });
-    message.success("Info item deleted successfully.");
+      infoItems: infoItems.filter((item) => item.id !== id),
+    };
+    setInfoBox(next);
+    persist(next);
+    if (editingItemId === id) handleCancelItemEdit();
+    message.success("Info item deleted.");
   };
 
-  // Handle delete component
   const handleDeleteComponent = () => {
     if (deleteComponent) {
       deleteComponent(component._id || component.id);
     }
   };
 
-  // Handle media modal open
-  const handleMediaModalOpen = (mode) => {
-    setMediaSelectionMode(mode);
-    setIsMediaModalVisible(true);
+  const handleSave = () => {
+    persist(infoBox);
+    setIsEditMode(false);
+    setShowAddForm(false);
+    setEditingItemId(null);
+    message.success("Info box saved.");
   };
 
-  // Handle edit mode toggle
-  const handleEditModeToggle = () => {
-    if (isEditMode) {
-      // Save changes when exiting edit mode
-      updateComponent({
-        ...component,
-        _mave: {
-          ...infoBox,
-          layout,
-          font,
-          color,
-          background,
-        },
-      });
-    }
-    setIsEditMode(!isEditMode);
+  const handleCancelEditMode = () => {
+    setInfoBox(normalizeInfoBox(component._mave));
+    setLayout(component._mave?.layout || "horizontal");
+    setFont(component._mave?.font || "Arial");
+    setColor(component._mave?.color || "#000000");
+    setBackground(component._mave?.background || "#ffffff");
+    setShowAddForm(false);
+    setEditingItemId(null);
+    setSelectedMedia([]);
+    setIsEditMode(false);
   };
 
-  // Styles based on configuration
+  const openAddForm = () => {
+    setEditingItemId(null);
+    setSelectedMedia([]);
+    form.resetFields();
+    form.setFieldsValue(emptyItemFields());
+    setFormKey((k) => k + 1);
+    setShowAddForm(true);
+  };
+
   const containerStyle = {
     fontFamily: font,
-    color: color,
+    color,
     backgroundColor: background,
     padding: "20px",
     borderRadius: "8px",
   };
 
+  const renderHtml = (html) =>
+    html ? <div dangerouslySetInnerHTML={{ __html: html }} /> : null;
+
+  const renderItemPreview = (item, index) => (
+    <div key={item.id} className="bg-white p-4 rounded-md shadow-sm border mb-3">
+      <div className="flex justify-between items-start gap-3 mb-2">
+        <span className="text-xs font-semibold text-gray-400">
+          Info Item #{index + 1}
+        </span>
+        {!preview && isEditMode && (
+          <Space>
+            <Button
+              size="small"
+              className="mavebutton"
+              icon={<EditOutlined />}
+              onClick={() => handleEditInfoItem(item)}
+            />
+            <Button
+              size="small"
+              danger
+              icon={<DeleteOutlined />}
+              onClick={() => handleDeleteInfoItem(item.id)}
+            />
+          </Space>
+        )}
+      </div>
+      <div className="grid grid-cols-12 gap-4 items-start">
+        <div className="col-span-3">
+          {Array.isArray(item.media) && item.media[0] && (
+            <Image
+              src={`${process.env.NEXT_PUBLIC_MEDIA_URL}/${item.media[0].file_path}`}
+              alt={item.media[0].title || "Media"}
+              width={100}
+              height={100}
+              objectFit="cover"
+              className="rounded-md"
+            />
+          )}
+        </div>
+        <div className="col-span-9 space-y-1">
+          {item.title && <h3 className="text-lg font-semibold m-0">{item.title}</h3>}
+          {renderHtml(item.description)}
+          {item.secondTitle && (
+            <h4 className="text-base font-semibold m-0">{item.secondTitle}</h4>
+          )}
+          {renderHtml(item.secondDescription)}
+          {item.altTitle && (
+            <h4 className="text-sm font-semibold m-0">{item.altTitle}</h4>
+          )}
+          {renderHtml(item.altDescription)}
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <div className="border p-4 rounded-md bg-gray-50">
       {!preview && (
         <div className="flex justify-between items-center mb-4">
-          <h3 className="text-xl font-semibold">Info Box Component</h3>
+          <div>
+            <h3 className="text-xl font-semibold">Info Box Component</h3>
+            <p className="text-sm text-gray-500 m-0">
+              {infoItems.length} info item{infoItems.length === 1 ? "" : "s"}
+            </p>
+          </div>
           <Space>
             {isEditMode ? (
               <>
-                <Button
-                  className="mavebutton"
-                  type="primary"
-                  onClick={handleEditModeToggle}
-                >
+                <Button className="mavebutton" type="primary" onClick={handleSave}>
                   Save Changes
                 </Button>
-                <Button
-                  className="mavecancelbutton"
-                  onClick={() => setIsEditMode(false)}
-                >
+                <Button className="mavecancelbutton" onClick={handleCancelEditMode}>
                   Cancel
                 </Button>
               </>
             ) : (
               <>
-                <Button
-                  className="mavebutton"
-                  onClick={() => setIsEditMode(true)}
-                >
+                <Button className="mavebutton" onClick={() => setIsEditMode(true)}>
                   Edit
                 </Button>
                 <Button
@@ -248,8 +348,8 @@ const InfoBoxComponent = ({
       )}
 
       {!preview && isEditMode && (
-        <Space direction="vertical" style={{ width: "100%" }}>
-          <div className="flex justify-end mb-4">
+        <Space direction="vertical" style={{ width: "100%" }} size="large">
+          <div className="flex justify-end">
             <Button
               icon={<SettingOutlined />}
               onClick={() => setShowAdvanced(!showAdvanced)}
@@ -271,237 +371,177 @@ const InfoBoxComponent = ({
             />
           )}
 
-          <MainContentSection
-            infoBox={infoBox}
-            onInfoBoxChange={setInfoBox}
-            onMediaSelect={handleMediaModalOpen}
-            media={infoBox.media}
-          />
+          {/* Main box header — once */}
+          <div className="bg-white p-4 rounded-md border border-gray-200">
+            <h4 className="text-base font-semibold mb-3 text-gray-700">
+              Main Content
+            </h4>
+            <MainContentSection
+              infoBox={infoBox}
+              onInfoBoxChange={setInfoBox}
+              onMediaSelect={() => openMediaModal("multiple", "main")}
+              media={mediaList}
+            />
+          </div>
 
-          <div className="border-t pt-4 mt-4">
-            <div className="flex justify-between items-center mb-4">
-              <h4 className="text-lg font-semibold">Info Items</h4>
+          {/* Multiple info items */}
+          <div className="border border-gray-200 rounded-md bg-white p-4">
+            <div className="flex justify-between items-center mb-4 flex-wrap gap-2">
+              <div>
+                <h4 className="text-lg font-semibold m-0">Info Item</h4>
+                <p className="text-xs text-gray-500 m-0">
+                  Same fields as main — add as many items as you need
+                </p>
+              </div>
               <Button
                 className="mavebutton"
-                onClick={() => setShowAddForm(!showAddForm)}
                 icon={showAddForm ? <MinusOutlined /> : <PlusOutlined />}
+                onClick={() => (showAddForm ? setShowAddForm(false) : openAddForm())}
               >
-                {showAddForm ? "Cancel" : "Add Info Item"}
+                {showAddForm ? "Close" : "Add Item"}
               </Button>
             </div>
 
-            {showAddForm && (
-              <AddInfoItemForm
-                form={form}
-                onFinish={handleAddSubmit}
-                onMediaSelect={handleMediaModalOpen}
-                selectedMedia={selectedMedia}
-              />
+            {/* Saved items list */}
+            {infoItems.length > 0 && (
+              <div className="mb-4">
+                {editingItemId ? null : (
+                  <Collapse accordion>
+                    {infoItems.map((item, index) => (
+                      <Panel
+                        header={`#${index + 1} — ${item.title || "Untitled"}`}
+                        key={item.id}
+                        extra={
+                          <Space
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <Button
+                              size="small"
+                              icon={<EditOutlined />}
+                              onClick={() => handleEditInfoItem(item)}
+                            />
+                            <Button
+                              size="small"
+                              danger
+                              icon={<DeleteOutlined />}
+                              onClick={() => handleDeleteInfoItem(item.id)}
+                            />
+                          </Space>
+                        }
+                      >
+                        {renderItemPreview(item, index)}
+                      </Panel>
+                    ))}
+                  </Collapse>
+                )}
+              </div>
+            )}
+
+            {/* Edit existing item */}
+            {editingItemId && (
+              <div className="mb-4">
+                <h5 className="font-medium mb-2">Edit Info Item</h5>
+                <AddInfoItemForm
+                  key={`edit-${editingItemId}-${formKey}`}
+                  form={editForm}
+                  onFinish={handleEditSubmit}
+                  onMediaSelect={() => openMediaModal("multiple", "editItem")}
+                  selectedMedia={selectedMedia}
+                  submitLabel="Update Item"
+                  editorKey={`edit-${editingItemId}-${formKey}`}
+                />
+                <Button className="mt-2" onClick={handleCancelItemEdit}>
+                  Cancel edit
+                </Button>
+              </div>
+            )}
+
+            {/* Add new item form */}
+            {showAddForm && !editingItemId && (
+              <div>
+                <h5 className="font-medium mb-2">
+                  New Info Item #{infoItems.length + 1}
+                </h5>
+                <AddInfoItemForm
+                  key={`add-${formKey}`}
+                  form={form}
+                  onFinish={handleAddSubmit}
+                  onMediaSelect={() => openMediaModal("multiple", "item")}
+                  selectedMedia={selectedMedia}
+                  submitLabel="Submit"
+                  editorKey={`add-${formKey}`}
+                />
+              </div>
+            )}
+
+            {infoItems.length === 0 && !showAddForm && (
+              <div className="text-center py-8 border border-dashed border-gray-300 rounded-lg">
+                <p className="text-gray-500 mb-3">No info items yet</p>
+                <Button className="mavebutton" icon={<PlusOutlined />} onClick={openAddForm}>
+                  Add Item
+                </Button>
+              </div>
+            )}
+
+            {infoItems.length > 0 && !showAddForm && !editingItemId && (
+              <div className="mt-3 text-center">
+                <Button className="mavebutton" icon={<PlusOutlined />} onClick={openAddForm}>
+                  Add another item
+                </Button>
+              </div>
             )}
           </div>
         </Space>
       )}
 
-      {/* Preview/Display Mode */}
-      <div style={preview || !isEditMode ? containerStyle : {}}>
-        {/* Title and Description - Full Width */}
-        {(preview || !isEditMode) && (
-          <div className="mb-6">
+      {(preview || !isEditMode) && (
+        <div style={containerStyle}>
+          {infoBox.title && (
             <h2 className="text-2xl font-bold mb-2">{infoBox.title}</h2>
-            <p className="mb-4">{infoBox.description}</p>
-          </div>
-        )}
+          )}
+          {renderHtml(infoBox.description)}
+          {infoBox.secondTitle && (
+            <h3 className="text-xl font-semibold mb-2 mt-4">{infoBox.secondTitle}</h3>
+          )}
+          {renderHtml(infoBox.secondDescription)}
+          {infoBox.altTitle && (
+            <h3 className="text-lg font-semibold mb-2 mt-4">{infoBox.altTitle}</h3>
+          )}
+          {renderHtml(infoBox.altDescription)}
 
-        {/* Main Content and Info Items */}
-        <div
-          className={`${
-            preview || !isEditMode
-              ? layout === "vertical"
-                ? "flex flex-col"
-                : "grid grid-cols-2 gap-8"
-              : "flex flex-col"
-          }`}
-        >
-          {/* Main Media Display */}
-          {(preview || !isEditMode) && (
-            <div className={`${layout === "vertical" ? "mb-6" : ""}`}>
-              {infoBox.media && infoBox.media.length > 0 && (
-                <div className="flex flex-wrap gap-2">
-                  {infoBox.media.map((mediaItem, index) => (
-                    <div key={index} className="relative">
-                      <Image
-                        src={`${process.env.NEXT_PUBLIC_MEDIA_URL}/${mediaItem.file_path}`}
-                        alt={mediaItem.title || mediaItem.title_en || "Media"}
-                        width={300}
-                        height={300}
-                        objectFit="cover"
-                        className="rounded-md"
-                      />
-                    </div>
-                  ))}
-                </div>
-              )}
+          {mediaList.length > 0 && (
+            <div className="flex flex-wrap gap-2 my-4">
+              {mediaList.map((mediaItem, index) => (
+                <Image
+                  key={index}
+                  src={`${process.env.NEXT_PUBLIC_MEDIA_URL}/${mediaItem.file_path}`}
+                  alt={mediaItem.title || "Media"}
+                  width={280}
+                  height={280}
+                  objectFit="cover"
+                  className="rounded-md"
+                />
+              ))}
             </div>
           )}
 
-          {/* Info Items Grid */}
-          <div className={`${layout === "vertical" ? "w-full" : ""}`}>
-            <div className="grid grid-cols-1 gap-6">
-              {infoBox.infoItems.map((item) => (
-                <div
-                  key={item.id}
-                  className="bg-white p-4 rounded-md shadow-sm"
-                >
-                  {editingItemId === item.id ? (
-                    <div className="flex gap-4">
-                      <div className="flex flex-col justify-center w-1/3">
-                        {item.media && item.media.length > 0 && (
-                          <div
-                            className="relative cursor-pointer"
-                            onClick={() => handleMediaModalOpen("multiple")}
-                          >
-                            <Image
-                              src={`${process.env.NEXT_PUBLIC_MEDIA_URL}/${item.media[0].file_path}`}
-                              alt={item.media[0].title || "Media"}
-                              width={200}
-                              height={200}
-                              objectFit="cover"
-                              className="rounded-md"
-                            />
-                          </div>
-                        )}
-                        <Button
-                          className="mavebutton mt-2"
-                          onClick={() => handleMediaModalOpen("multiple")}
-                        >
-                          Change Media
-                        </Button>
-                      </div>
-                      <div className="w-2/3">
-                        <Form
-                          form={editForm}
-                          onFinish={handleEditSubmit}
-                          layout="vertical"
-                        >
-                          <Form.Item
-                            name="title"
-                            rules={[
-                              {
-                                required: true,
-                                message: "Please enter the title",
-                              },
-                            ]}
-                          >
-                            <Input placeholder="Title" />
-                          </Form.Item>
-                          <Form.Item
-                            name="description"
-                            rules={[
-                              {
-                                required: true,
-                                message: "Please enter the description",
-                              },
-                            ]}
-                          >
-                            <Input.TextArea
-                              rows={4}
-                              placeholder="Description"
-                            />
-                          </Form.Item>
-                          <Form.Item name="link">
-                            <Input placeholder="Link URL (optional)" />
-                          </Form.Item>
-                          <Form.Item>
-                            <Space>
-                              <Button
-                                className="mavebutton"
-                                type="primary"
-                                htmlType="submit"
-                              >
-                                Save
-                              </Button>
-                              <Button
-                                className="mavecancelbutton"
-                                onClick={handleCancelEdit}
-                              >
-                                Cancel
-                              </Button>
-                            </Space>
-                          </Form.Item>
-                        </Form>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-12 items-center gap-4">
-                      <div className="col-span-3">
-                        {item.media && item.media.length > 0 && (
-                          <div className="relative">
-                            <Image
-                              src={`${process.env.NEXT_PUBLIC_MEDIA_URL}/${item.media[0].file_path}`}
-                              alt={item.media[0].title || "Media"}
-                              width={100}
-                              height={100}
-                              objectFit="cover"
-                              className="rounded-md"
-                            />
-                          </div>
-                        )}
-                      </div>
-                      <div className="col-span-8">
-                        <h3 className="text-lg font-semibold mb-2">
-                          {item.title}
-                        </h3>
-                        <p className="mb-2">{item.description}</p>
-                        {item.link && (
-                          <a
-                            href={item.link}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-yellow-600 hover:underline"
-                          >
-                            {item.link}
-                          </a>
-                        )}
-                      </div>
-                      {!preview && isEditMode && (
-                        <Space className="col-span-1 flex flex-col">
-                          <Button
-                            className="mavebutton"
-                            icon={<EditOutlined />}
-                            onClick={() => handleEditInfoItem(item)}
-                          />
-                          <Button
-                            className="-ml-3"
-                            danger
-                            icon={<DeleteOutlined />}
-                            onClick={() => handleDeleteInfoItem(item.id)}
-                          />
-                        </Space>
-                      )}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
+          <div className="mt-4">
+            {infoItems.map((item, index) => renderItemPreview(item, index))}
+            {infoItems.length === 0 && (
+              <p className="text-gray-400 text-sm">No info items added yet.</p>
+            )}
           </div>
         </div>
-      </div>
+      )}
 
-      {/* Media Selection Modal */}
       {!preview && isEditMode && (
         <MediaSelectionModal
+          key={`infobox-media-${mediaTarget}-${editingItemId || formKey}`}
           isVisible={isMediaModalVisible}
-          onClose={() => {
-            setIsMediaModalVisible(false);
-          }}
-          onSelectMedia={(media) => {
-            if (mediaSelectionMode === "multiple") {
-              handleSelectMedia(media);
-            } else {
-              handleMainMediaSelect(media);
-            }
-          }}
+          onClose={() => setIsMediaModalVisible(false)}
+          onSelectMedia={handleMediaSelected}
           selectionMode={mediaSelectionMode}
+          initialSelectedMedia={getInitialMediaForModal()}
         />
       )}
     </div>
