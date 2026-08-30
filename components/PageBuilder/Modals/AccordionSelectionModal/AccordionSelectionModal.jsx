@@ -21,6 +21,15 @@ import RichTextEditor from "../../../RichTextEditor";
 const { Option } = Select;
 const { Panel } = Collapse;
 
+const toAccordionItems = (value) => {
+  if (Array.isArray(value)) return value;
+  if (value && typeof value === "object") {
+    if (Array.isArray(value.items)) return value.items;
+    if (Array.isArray(value.data)) return value.data;
+  }
+  return [];
+};
+
 const AccordionSelectionModal = ({
   isVisible,
   onClose,
@@ -28,14 +37,17 @@ const AccordionSelectionModal = ({
   initialData = [],
 }) => {
   const [form] = Form.useForm();
-  const [accordionItems, setAccordionItems] = useState(initialData);
+  const [accordionItems, setAccordionItems] = useState(() =>
+    toAccordionItems(initialData)
+  );
   const [showStyleConfig, setShowStyleConfig] = useState({});
 
   useEffect(() => {
-    setAccordionItems(initialData);
+    const items = toAccordionItems(initialData);
+    setAccordionItems(items);
     // Initialize showStyleConfig for each item
     const initialStyleConfig = {};
-    initialData.forEach((_, index) => {
+    items.forEach((_, index) => {
       initialStyleConfig[index] = false;
     });
     setShowStyleConfig(initialStyleConfig);

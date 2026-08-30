@@ -32,6 +32,19 @@ const getColorValue = (colorObj) => {
   return "#ffffff";
 };
 
+const toAccordionItems = (value) => {
+  if (Array.isArray(value)) return value;
+  if (value && typeof value === "object") {
+    if (Array.isArray(value.items)) return value.items;
+    if (Array.isArray(value.data)) return value.data;
+    const values = Object.values(value);
+    if (values.length && values.every((item) => item && typeof item === "object")) {
+      return values;
+    }
+  }
+  return [];
+};
+
 const AccordionComponent = ({
   component,
   updateComponent,
@@ -39,20 +52,23 @@ const AccordionComponent = ({
   preview = false,
 }) => {
   const [isModalVisible, setIsModalVisible] = useState(false);
-  const [accordionData, setAccordionData] = useState(component._mave || []);
+  const [accordionData, setAccordionData] = useState(() =>
+    toAccordionItems(component._mave)
+  );
   const [activeKeys, setActiveKeys] = useState([]);
 
   useEffect(() => {
-    setAccordionData(component._mave || []);
+    setAccordionData(toAccordionItems(component._mave));
   }, [component._mave]);
 
   const handleSelectAccordion = (newAccordionData) => {
+    const items = toAccordionItems(newAccordionData);
     updateComponent({
       ...component,
-      _mave: newAccordionData,
+      _mave: items,
       id: component._id,
     });
-    setAccordionData(newAccordionData);
+    setAccordionData(items);
     setIsModalVisible(false);
     message.success("Accordion updated successfully");
   };
@@ -70,7 +86,7 @@ const AccordionComponent = ({
   };
 
   const handleContentChange = (content, index) => {
-    const newData = accordionData.map((item, i) => {
+    const newData = toAccordionItems(accordionData).map((item, i) => {
       if (i === index) {
         return { ...item, content };
       }
@@ -85,7 +101,7 @@ const AccordionComponent = ({
   };
 
   const renderPanels = (data) => {
-    return data?.map((item, index) => {
+    return toAccordionItems(data).map((item, index) => {
       const headerBg = getColorValue(item.style?.headerBg);
       const headerTextColor = getColorValue(item.style?.headerTextColor);
       const contentBg = getColorValue(item.style?.contentBg);
@@ -136,14 +152,18 @@ const AccordionComponent = ({
               <AccordionComponent
                 component={{ _mave: item.nestedAccordion }}
                 updateComponent={(updatedNested) => {
-                  const newData = [...accordionData];
-                  newData[index].nestedAccordion = updatedNested._mave;
+                  const newData = [...toAccordionItems(accordionData)];
+                  newData[index] = {
+                    ...newData[index],
+                    nestedAccordion: toAccordionItems(updatedNested._mave),
+                  };
                   updateComponent({ ...component, _mave: newData });
                 }}
                 deleteComponent={() => {
+                  const items = toAccordionItems(accordionData);
                   const newData = [
-                    ...accordionData.slice(0, index),
-                    ...accordionData.slice(index + 1),
+                    ...items.slice(0, index),
+                    ...items.slice(index + 1),
                   ];
                   updateComponent({ ...component, _mave: newData });
                 }}
@@ -182,8 +202,8 @@ const AccordionComponent = ({
             Accordion Component
           </Title>
           <Text type="secondary" className="text-sm">
-            {accordionData.length}{" "}
-            {accordionData.length === 1 ? "item" : "items"}
+            {toAccordionItems(accordionData).length}{" "}
+            {toAccordionItems(accordionData).length === 1 ? "item" : "items"}
           </Text>
         </div>
         <Space>
@@ -222,7 +242,7 @@ const AccordionComponent = ({
       </Collapse>
 
       {/* Empty State */}
-      {accordionData.length === 0 && (
+      {toAccordionItems(accordionData).length === 0 && (
         <div className="text-center py-8">
           <PlusOutlined className="text-4xl text-gray-300 mb-4" />
           <Text type="secondary" className="block">
@@ -244,7 +264,7 @@ const AccordionComponent = ({
           isVisible={isModalVisible}
           onClose={() => setIsModalVisible(false)}
           onSelectAccordion={handleSelectAccordion}
-          initialData={accordionData}
+          initialData={toAccordionItems(accordionData)}
         />
       )}
     </div>
