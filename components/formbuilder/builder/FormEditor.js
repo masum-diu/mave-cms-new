@@ -47,7 +47,7 @@ const FormEditor = ({ formId }) => {
         component_id: "dummy_form",
         component_class: "form bg-white p-6 rounded shadow-md",
         method: "POST",
-        action_url: "https://example.com",
+        action_url: "/form-submission",
         enctype: "multipart/form-data",
       });
       setFormMeta({
@@ -70,6 +70,13 @@ const FormEditor = ({ formId }) => {
   };
 
   const saveForm = async () => {
+    const actionUrl = (formAttributes.action_url || "").trim();
+    if (!actionUrl || /^https?:\/\/(www\.)?example\.com\/?$/i.test(actionUrl)) {
+      message.error(
+        "Please set a real Action URL before saving — https://example.com is just a placeholder and won't receive submissions."
+      );
+      return;
+    }
     try {
       setLoading(true);
       const data = {

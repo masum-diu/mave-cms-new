@@ -20,21 +20,20 @@ const ViewDetailsDrawer = ({
   // Check if user is admin
   const isAdmin = currentUser?.role_id === "1";
 
-  // Function to get CV URL
-  const getCvUrl = () => {
-    if (mediaList?.cv?.file_path) {
-      return `${process.env.NEXT_PUBLIC_MEDIA_URL}/${mediaList.cv.file_path}`;
-    }
-    return null;
-  };
+  // Any uploaded file/image lands here, keyed by its form field name — each
+  // value is either a single media object or an array of them (multi-file field).
+  const mediaEntries =
+    mediaList && typeof mediaList === "object" ? Object.entries(mediaList) : [];
 
-  // Function to handle CV download
-  const handleDownloadCV = () => {
-    const cvUrl = getCvUrl();
-    if (cvUrl) {
-      window.open(cvUrl, "_blank");
-    }
-  };
+  const getMediaUrl = (media) =>
+    media?.file_path
+      ? `${process.env.NEXT_PUBLIC_MEDIA_URL}/${media.file_path}`
+      : null;
+
+  const isImageMedia = (media) => !!media?.file_type?.startsWith("image/");
+
+  const formatFieldLabel = (key) =>
+    key.replace(/_/g, " ").replace(/\b\w/g, (char) => char.toUpperCase());
 
   // Function to format time to 12-hour format with AM/PM
   const formatTime = (time) => {
@@ -112,24 +111,54 @@ const ViewDetailsDrawer = ({
       open={visible}
       width={"50%"}
     >
-      {isValidData && dataSource.length > 0 ? (
+      {(isValidData && dataSource.length > 0) || mediaEntries.length > 0 ? (
         <>
-          <Table
-            dataSource={dataSource}
-            columns={columns}
-            pagination={false}
-            rowKey="key"
-          />
-          {formType === "career" && mediaList?.cv && (
-            <div style={{ marginTop: 16, textAlign: "center" }}>
-              <Button
-                type="primary"
-                icon={<DownloadOutlined />}
-                onClick={handleDownloadCV}
-                style={{ width: "100%" }}
-              >
-                Download CV
-              </Button>
+          {dataSource.length > 0 && (
+            <Table
+              dataSource={dataSource}
+              columns={columns}
+              pagination={false}
+              rowKey="key"
+            />
+          )}
+          {mediaEntries.length > 0 && (
+            <div style={{ marginTop: 16 }}>
+              <h4>Attachments</h4>
+              <Space direction="vertical" style={{ width: "100%" }} size="middle">
+                {mediaEntries.flatMap(([fieldName, entry]) => {
+                  const files = Array.isArray(entry) ? entry : [entry];
+                  return files.map((media, idx) => {
+                    const url = getMediaUrl(media);
+                    if (!url) return null;
+                    return (
+                      <Space key={`${fieldName}-${idx}`} align="center">
+                        <strong>{formatFieldLabel(fieldName)}:</strong>
+                        {isImageMedia(media) ? (
+                          <a href={url} target="_blank" rel="noopener noreferrer">
+                            <img
+                              src={url}
+                              alt={fieldName}
+                              style={{
+                                maxWidth: 120,
+                                maxHeight: 120,
+                                borderRadius: 4,
+                                display: "block",
+                              }}
+                            />
+                          </a>
+                        ) : (
+                          <Button
+                            icon={<DownloadOutlined />}
+                            onClick={() => window.open(url, "_blank")}
+                          >
+                            {media.file_name || "Download"}
+                          </Button>
+                        )}
+                      </Space>
+                    );
+                  });
+                })}
+              </Space>
             </div>
           )}
         </>

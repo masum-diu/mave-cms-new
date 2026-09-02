@@ -23,7 +23,7 @@ const FormBuilder = () => {
       component_id: "dummy_form",
       component_class: "form, bg-light",
       method: "POST",
-      action_url: "https://example.com",
+      action_url: "/form-submission",
       enctype: "multipart/form-data",
     });
     setFormMeta({
@@ -48,6 +48,13 @@ const FormBuilder = () => {
 
   // Save form to server
   const saveForm = async () => {
+    const actionUrl = (formAttributes.action_url || "").trim();
+    if (!actionUrl || /^https?:\/\/(www\.)?example\.com\/?$/i.test(actionUrl)) {
+      message.error(
+        "Please set a real Action URL before saving — https://example.com is just a placeholder and won't receive submissions."
+      );
+      return;
+    }
     try {
       setLoading(true);
       const response = await instance.post("/form_builder", {

@@ -47,14 +47,26 @@ const FormResponsesGrid = ({ responses, refreshData, currentUser }) => {
     const tagColors = {
       career: "yellow",
       contact: "green",
-      default: "default",
+      default: "blue",
     };
 
     return (
       <Tag color={tagColors[formType] || tagColors.default}>
-        {formType?.toUpperCase() || "UNKNOWN"}
+        {formType?.toUpperCase() || "GENERAL"}
       </Tag>
     );
+  };
+
+  // Function to format a raw field key ("first_name") into a label ("First Name")
+  const formatFieldLabel = (key) =>
+    key.replace(/_/g, " ").replace(/\b\w/g, (char) => char.toUpperCase());
+
+  // Preview the first couple of scalar fields from an arbitrary form_data payload
+  const getPreviewFields = (formData, limit = 2) => {
+    if (!formData || typeof formData !== "object") return [];
+    return Object.entries(formData)
+      .filter(([, value]) => value !== null && value !== undefined && value !== "" && typeof value !== "object")
+      .slice(0, limit);
   };
 
   // Function to get CV URL
@@ -132,9 +144,17 @@ const FormResponsesGrid = ({ responses, refreshData, currentUser }) => {
                 ),
               ].filter(Boolean)}
             >
-              <p>
-                <strong>Name:</strong> {response.form_data?.name || "N/A"}
-              </p>
+              {getPreviewFields(response.form_data).length > 0 ? (
+                getPreviewFields(response.form_data).map(([key, value]) => (
+                  <p key={key}>
+                    <strong>{formatFieldLabel(key)}:</strong> {String(value)}
+                  </p>
+                ))
+              ) : (
+                <p className="text-gray-400 italic">
+                  No preview available — click view for details
+                </p>
+              )}
               {response.form_type === "career" && (
                 <p>
                   <strong>Position:</strong> {response.form_data?.type || "N/A"}

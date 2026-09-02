@@ -74,14 +74,23 @@ const FormResponsesTable = ({ responses, refreshData, currentUser }) => {
     const tagColors = {
       career: "yellow",
       contact: "green",
-      default: "default",
+      default: "blue",
     };
 
     return (
       <Tag color={tagColors[formType] || tagColors.default}>
-        {formType?.toUpperCase() || "UNKNOWN"}
+        {formType?.toUpperCase() || "GENERAL"}
       </Tag>
     );
+  };
+
+  // Preview the first scalar field from an arbitrary form_data payload
+  const getPreviewValue = (formData) => {
+    if (!formData || typeof formData !== "object") return null;
+    const entry = Object.entries(formData).find(
+      ([, value]) => value !== null && value !== undefined && value !== "" && typeof value !== "object"
+    );
+    return entry ? String(entry[1]) : null;
   };
 
   const columns = [
@@ -99,10 +108,9 @@ const FormResponsesTable = ({ responses, refreshData, currentUser }) => {
       render: (formType) => renderFormTypeTag(formType),
     },
     {
-      title: "Name",
-      dataIndex: ["form_data", "name"],
-      key: "name",
-      render: (text) => text || "N/A",
+      title: "Preview",
+      key: "preview",
+      render: (_, record) => getPreviewValue(record.form_data) || "N/A",
     },
     {
       title: "Position",
