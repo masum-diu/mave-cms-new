@@ -1,9 +1,39 @@
 // components/FormResponses/ViewDetailsDrawer.jsx
 
 import React from "react";
-import { Drawer, Table, Empty, Button, Space, Tag } from "antd";
-import { DownloadOutlined, EditOutlined } from "@ant-design/icons";
+import { Drawer, Empty, Button, Tag } from "antd";
+import {
+  DownloadOutlined,
+  EditOutlined,
+  MailOutlined,
+  SolutionOutlined,
+  FormOutlined,
+  PaperClipOutlined,
+} from "@ant-design/icons";
 import moment from "moment";
+
+const TYPE_STYLE = {
+  career: {
+    accent: "#fcb813",
+    badgeBg: "#fef3c7",
+    badgeText: "#b45309",
+    icon: <SolutionOutlined />,
+  },
+  contact: {
+    accent: "#22c55e",
+    badgeBg: "#dcfce7",
+    badgeText: "#15803d",
+    icon: <MailOutlined />,
+  },
+  default: {
+    accent: "#3b82f6",
+    badgeBg: "#dbeafe",
+    badgeText: "#1d4ed8",
+    icon: <FormOutlined />,
+  },
+};
+
+const getTypeStyle = (formType) => TYPE_STYLE[formType] || TYPE_STYLE.default;
 
 const ViewDetailsDrawer = ({
   visible,
@@ -19,6 +49,8 @@ const ViewDetailsDrawer = ({
 
   // Check if user is admin
   const isAdmin = currentUser?.role_id === "1";
+
+  const { accent, badgeBg, badgeText, icon } = getTypeStyle(formType);
 
   // Any uploaded file/image lands here, keyed by its form field name — each
   // value is either a single media object or an array of them (multi-file field).
@@ -36,16 +68,13 @@ const ViewDetailsDrawer = ({
     key.replace(/_/g, " ").replace(/\b\w/g, (char) => char.toUpperCase());
 
   // Function to format time to 12-hour format with AM/PM
-  const formatTime = (time) => {
-    return moment(time, "HH:mm").format("hh:mm A");
-  };
+  const formatTime = (time) => moment(time, "HH:mm").format("hh:mm A");
 
-  // Convert the form_data object into an array of key-value pairs for the table
-  const dataSource = isValidData
+  // Convert the form_data object into label/value rows
+  const fieldRows = isValidData
     ? Object.entries(data)
-        .filter(([_, value]) => value !== null) // Filter out null values
-        .map(([key, value], index) => ({
-          key: index,
+        .filter(([, value]) => value !== null)
+        .map(([key, value]) => ({
           field: key,
           value:
             key === "callTime" && Array.isArray(value)
@@ -54,43 +83,32 @@ const ViewDetailsDrawer = ({
                 ? value.join(", ")
                 : typeof value === "object"
                   ? JSON.stringify(value)
-                  : String(value), // Convert all non-null values to string
+                  : String(value),
         }))
     : [];
 
-  const columns = [
-    {
-      title: "Field",
-      dataIndex: "field",
-      key: "field",
-      width: "30%",
-      render: (text) => (
-        <strong>
-          {text
-            .replace(/_/g, " ")
-            .replace(/\b\w/g, (char) => char.toUpperCase())}
-        </strong>
-      ),
-    },
-    {
-      title: "Value",
-      dataIndex: "value",
-      key: "value",
-    },
-  ];
+  const hasContent = fieldRows.length > 0 || mediaEntries.length > 0;
 
   return (
     <Drawer
       title={
-        <Space style={{ width: "100%", justifyContent: "space-between" }}>
-          <Space>
-            Form Response Details
-            {formType && (
-              <Tag color={formType === "career" ? "yellow" : "default"}>
-                {formType.toUpperCase()}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div
+              className="flex h-9 w-9 items-center justify-center rounded-full text-base"
+              style={{ backgroundColor: badgeBg, color: badgeText }}
+            >
+              {icon}
+            </div>
+            <div>
+              <div className="text-base font-semibold leading-none">
+                Response Details
+              </div>
+              <Tag color={accent} style={{ marginTop: 6, borderRadius: 999 }}>
+                {formType?.toUpperCase() || "GENERAL"}
               </Tag>
-            )}
-          </Space>
+            </div>
+          </div>
           {isAdmin && (
             <Button
               type="primary"
@@ -104,66 +122,81 @@ const ViewDetailsDrawer = ({
               Edit
             </Button>
           )}
-        </Space>
+        </div>
       }
       placement="right"
       onClose={onClose}
       open={visible}
       width={"50%"}
     >
-      {(isValidData && dataSource.length > 0) || mediaEntries.length > 0 ? (
-        <>
-          {dataSource.length > 0 && (
-            <Table
-              dataSource={dataSource}
-              columns={columns}
-              pagination={false}
-              rowKey="key"
-            />
+      {hasContent ? (
+        <div className="space-y-6">
+          {fieldRows.length > 0 && (
+            <div className="rounded-2xl border border-gray-100 divide-y divide-gray-100 overflow-hidden">
+              {fieldRows.map((row) => (
+                <div
+                  key={row.field}
+                  className="flex items-start justify-between gap-6 px-4 py-3 hover:bg-gray-50 transition-colors"
+                >
+                  <span className="w-2/5 shrink-0 text-xs font-semibold uppercase tracking-wide text-gray-400 pt-0.5">
+                    {formatFieldLabel(row.field)}
+                  </span>
+                  <span className="flex-1 text-right text-sm font-medium text-gray-700 break-words">
+                    {row.value}
+                  </span>
+                </div>
+              ))}
+            </div>
           )}
+
           {mediaEntries.length > 0 && (
-            <div style={{ marginTop: 16 }}>
-              <h4>Attachments</h4>
-              <Space direction="vertical" style={{ width: "100%" }} size="middle">
+            <div>
+              <div className="flex items-center gap-2 mb-3 text-sm font-semibold text-gray-500">
+                <PaperClipOutlined />
+                Attachments
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 {mediaEntries.flatMap(([fieldName, entry]) => {
                   const files = Array.isArray(entry) ? entry : [entry];
                   return files.map((media, idx) => {
                     const url = getMediaUrl(media);
                     if (!url) return null;
                     return (
-                      <Space key={`${fieldName}-${idx}`} align="center">
-                        <strong>{formatFieldLabel(fieldName)}:</strong>
+                      <div
+                        key={`${fieldName}-${idx}`}
+                        className="rounded-xl border border-gray-100 p-3 flex flex-col items-center gap-2 text-center"
+                      >
                         {isImageMedia(media) ? (
                           <a href={url} target="_blank" rel="noopener noreferrer">
                             <img
                               src={url}
                               alt={fieldName}
-                              style={{
-                                maxWidth: 120,
-                                maxHeight: 120,
-                                borderRadius: 4,
-                                display: "block",
-                              }}
+                              className="h-20 w-20 object-cover rounded-lg"
                             />
                           </a>
                         ) : (
                           <Button
+                            shape="circle"
+                            size="large"
                             icon={<DownloadOutlined />}
                             onClick={() => window.open(url, "_blank")}
-                          >
-                            {media.file_name || "Download"}
-                          </Button>
+                          />
                         )}
-                      </Space>
+                        <span className="text-xs text-gray-400">
+                          {formatFieldLabel(fieldName)}
+                        </span>
+                      </div>
                     );
                   });
                 })}
-              </Space>
+              </div>
             </div>
           )}
-        </>
+        </div>
       ) : (
-        <Empty description="No Details Available" />
+        <div className="flex flex-col items-center justify-center py-16">
+          <Empty description="No Details Available" />
+        </div>
       )}
     </Drawer>
   );

@@ -5,10 +5,12 @@ import { useRouter } from "next/router";
 import { Spin, Alert } from "antd";
 import FormResponsesTable from "../../../components/FormResponses/FormResponsesTable";
 import instance from "../../../axios";
+import { useAuth } from "../../../src/context/AuthContext";
 
 const FormResponsesPage = () => {
   const router = useRouter();
   const { id } = router.query; // Form ID from the URL
+  const { user: currentUser } = useAuth();
 
   const [responses, setResponses] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -69,7 +71,11 @@ const FormResponsesPage = () => {
   return (
     <div className="mavecontainer">
       <h1 className="text-3xl font-bold mb-6">Form Responses</h1>
-      <FormResponsesTable responses={responses} refreshData={fetchResponses} />
+      <FormResponsesTable
+        responses={responses}
+        refreshData={fetchResponses}
+        currentUser={currentUser}
+      />
     </div>
   );
 };

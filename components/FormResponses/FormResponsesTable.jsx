@@ -98,7 +98,10 @@ const FormResponsesTable = ({ responses, refreshData, currentUser }) => {
       title: "ID",
       dataIndex: "id",
       key: "id",
-      width: 80,
+      width: 90,
+      render: (id) => (
+        <span className="text-xs font-semibold text-gray-400">#{id}</span>
+      ),
     },
     {
       title: "Type",
@@ -159,13 +162,14 @@ const FormResponsesTable = ({ responses, refreshData, currentUser }) => {
 
   return (
     <>
-      <Table
-        dataSource={responses}
-        columns={columns}
-        rowKey="id"
-        pagination={{ pageSize: 10 }}
-        bordered
-      />
+      <div className="rounded-2xl border border-gray-100 bg-white shadow-sm overflow-hidden">
+        <Table
+          dataSource={responses}
+          columns={columns}
+          rowKey="id"
+          pagination={{ pageSize: 10 }}
+        />
+      </div>
 
       {/* View Details Drawer */}
       <ViewDetailsDrawer
