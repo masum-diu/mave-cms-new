@@ -8,6 +8,22 @@ import {
 
 const { Option } = Select;
 
+const copyToClipboard = async (text) => {
+  if (navigator.clipboard && window.isSecureContext) {
+    await navigator.clipboard.writeText(text);
+    return;
+  }
+  const textarea = document.createElement("textarea");
+  textarea.value = text;
+  textarea.style.position = "fixed";
+  textarea.style.opacity = "0";
+  document.body.appendChild(textarea);
+  textarea.focus();
+  textarea.select();
+  document.execCommand("copy");
+  document.body.removeChild(textarea);
+};
+
 const Stat = ({ label, value, color }) => (
   <div style={{
     display: "flex", alignItems: "center", gap: 6,
@@ -87,9 +103,13 @@ const GalleryHeader = ({
           <Tooltip title="Copy API endpoint">
             <Button
               icon={<CopyOutlined />}
-              onClick={() => {
-                navigator.clipboard.writeText(`${process.env.NEXT_PUBLIC_API_BASE_URL}/media`);
-                message.success("API endpoint copied");
+              onClick={async () => {
+                try {
+                  await copyToClipboard(`${process.env.NEXT_PUBLIC_API_BASE_URL}/media`);
+                  message.success("API endpoint copied");
+                } catch (err) {
+                  message.error("Copy failed");
+                }
               }}
               style={{ height: 38, borderRadius: 10, border: "1px solid #e5e7eb", color: "#6b7280" }}
             />

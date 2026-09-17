@@ -9,6 +9,7 @@ import {
   Tooltip,
   Select,
   Radio,
+  ColorPicker,
 } from "antd";
 import {
   DeleteOutlined,
@@ -25,6 +26,7 @@ import {
 } from "@ant-design/icons";
 import MediaSelectionModal from "../Modals/MediaSelectionModal";
 import Image from "next/image";
+import InlineSvg from "../../common/InlineSvg";
 
 const MediaComponent = ({
   component,
@@ -86,7 +88,45 @@ const MediaComponent = ({
     const fileUrl = `${process.env.NEXT_PUBLIC_MEDIA_URL}/${media.file_path}`;
     const fileType = media.file_type || "";
 
-    if (fileType.startsWith("image/")) {
+    if (fileType === "image/svg+xml") {
+      return (
+        <div className="relative group">
+          <InlineSvg
+            key={media.id}
+            src={fileUrl}
+            color={component.svgColor}
+            alt={media.title || "Image"}
+            className="rounded-lg transition-all duration-300 group-hover:shadow-lg w-48 h-36"
+            style={{ objectFit: "contain" }}
+          />
+          <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+            <Space>
+              <Tooltip title="View">
+                <Button
+                  type="text"
+                  icon={<EyeOutlined className="text-white" />}
+                  onClick={() => window.open(fileUrl, "_blank")}
+                />
+              </Tooltip>
+              <Tooltip title="Download">
+                <Button
+                  type="text"
+                  icon={<DownloadOutlined className="text-white" />}
+                  onClick={() => {
+                    const link = document.createElement("a");
+                    link.href = fileUrl;
+                    link.download = media.file_name;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                  }}
+                />
+              </Tooltip>
+            </Space>
+          </div>
+        </div>
+      );
+    } else if (fileType.startsWith("image/")) {
       return (
         <div className="relative group">
           <Image
@@ -301,6 +341,18 @@ const MediaComponent = ({
               >
                 Choose Media
               </Button>
+            )}
+
+            {mediaData && component.selectionMode !== "multiple" && mediaData.file_type === "image/svg+xml" && (
+              <div className="flex items-center gap-2 justify-center mt-3">
+                <span className="text-sm text-gray-500">SVG Color</span>
+                <ColorPicker
+                  value={component.svgColor || null}
+                  allowClear
+                  onChange={(_, hex) => updateComponent({ ...component, svgColor: hex })}
+                  onClear={() => updateComponent({ ...component, svgColor: undefined })}
+                />
+              </div>
             )}
           </div>
         ) : (

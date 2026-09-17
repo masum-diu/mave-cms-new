@@ -289,6 +289,7 @@ const TestimonialComponent = ({
             message.success("Image selected successfully.");
           }}
           selectionMode="single"
+          initialSelectedMedia={selectedImage ? [selectedImage] : []}
         />
       )}
     </div>

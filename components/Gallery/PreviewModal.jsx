@@ -81,11 +81,27 @@ const PreviewModal = ({ visible, onClose, media, mediaType, handleEdit, availabl
     }
   }, [editMode, media, form]);
 
-  const copy = (text, key) => {
-    navigator.clipboard.writeText(text);
-    message.success(key === "path" ? "Path copied!" : "Link copied!");
-    setCopied(key);
-    setTimeout(() => setCopied(""), 2000);
+  const copy = async (text, key) => {
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(text);
+      } else {
+        const textarea = document.createElement("textarea");
+        textarea.value = text;
+        textarea.style.position = "fixed";
+        textarea.style.opacity = "0";
+        document.body.appendChild(textarea);
+        textarea.focus();
+        textarea.select();
+        document.execCommand("copy");
+        document.body.removeChild(textarea);
+      }
+      message.success(key === "path" ? "Path copied!" : "Link copied!");
+      setCopied(key);
+      setTimeout(() => setCopied(""), 2000);
+    } catch (err) {
+      message.error("Copy failed");
+    }
   };
 
   const handleFormSubmit = async (values) => {
