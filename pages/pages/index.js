@@ -1,6 +1,6 @@
 // pages/pages.jsx
 
-import { message, Spin } from "antd";
+import { message } from "antd";
 import React, { useState, useEffect, useMemo } from "react";
 import instance from "../../axios";
 import { cachedApiCall } from "../../utils/apiUtils";
@@ -267,6 +267,7 @@ const Pages = () => {
         typePages={sortedTypePages.slice(0, itemsPerPage)}
         typeSubpages={typeSubpages.slice(0, itemsPerPage)}
         typeFooters={typeFooters.slice(0, itemsPerPage)}
+        loading={loading}
         handleExpand={handleExpand}
         expandedPageId={expandedPageId}
         handleDeletePage={handleDeletePage}

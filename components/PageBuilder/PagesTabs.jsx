@@ -38,6 +38,7 @@ const PagesTabs = ({
   typePages = [],
   typeSubpages = [],
   typeFooters = [],
+  loading = false,
   handleExpand,
   expandedPageId,
   handleDeletePage,
@@ -68,6 +69,7 @@ const PagesTabs = ({
       {/* Content */}
       <RenderPages
         webpages={dataMap[active]}
+        loading={loading}
         handlePreviewPage={handlePreviewPage}
         handleExpand={handleExpand}
         expandedPageId={expandedPageId}

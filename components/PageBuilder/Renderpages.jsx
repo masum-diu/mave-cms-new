@@ -1,11 +1,26 @@
 import React from "react";
 import { LayoutOutlined } from "@ant-design/icons";
+import { Skeleton } from "antd";
 import PageCard from "./PageCard";
 
 const TYPE_LABEL = { pages: "pages", subpages: "subpages", footers: "footers" };
 
+const SkeletonCard = () => (
+  <div
+    style={{
+      border: "1px solid #e5e7eb",
+      borderRadius: 10,
+      padding: "16px 20px",
+      background: "#fff",
+    }}
+  >
+    <Skeleton active title={{ width: "40%" }} paragraph={{ rows: 1, width: "60%" }} />
+  </div>
+);
+
 const RenderPages = ({
   webpages = [],
+  loading = false,
   handlePreviewPage,
   handleExpand,
   expandedPageId,
@@ -14,6 +29,22 @@ const RenderPages = ({
   handleDuplicatePage,
   pageType = "pages",
 }) => {
+  if (loading) {
+    return (
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fill, minmax(480px, 1fr))",
+          gap: 4,
+        }}
+      >
+        {Array.from({ length: 4 }).map((_, i) => (
+          <SkeletonCard key={i} />
+        ))}
+      </div>
+    );
+  }
+
   if (webpages.length === 0) {
     return (
       <div style={{
