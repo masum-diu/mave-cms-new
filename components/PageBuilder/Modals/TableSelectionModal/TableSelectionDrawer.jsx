@@ -1,7 +1,16 @@
 // TableSelectionModal/TableSelectionDrawer.jsx
 
 import React, { useState, useEffect } from "react";
-import { Drawer, Form, Button, Typography, Select, message } from "antd";
+import { Drawer, Form, Button, Typography, Select, message, Tabs, Tag } from "antd";
+import {
+  DownloadOutlined,
+  TableOutlined,
+  FilterOutlined,
+  EyeOutlined,
+  SaveOutlined,
+  CloseOutlined,
+} from "@ant-design/icons";
+import Papa from "papaparse";
 import CSVImportSection from "./CSVImportSection";
 import HeadersSection from "./HeadersSection";
 import RowsSection from "./RowsSection";
@@ -131,70 +140,152 @@ const TableSelectionDrawer = ({
     onClose();
   };
 
+  const handleExportCSV = () => {
+    if (!headers?.length || !rows?.length) {
+      message.info("There is no table data to export yet.");
+      return;
+    }
+
+    const csv = Papa.unparse({
+      fields: headers.map((h) => h.name),
+      data: rows,
+    });
+
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "table-export.csv";
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+    message.success("Table exported successfully.");
+  };
+
+  const tabItems = [
+    {
+      key: "data",
+      label: (
+        <span>
+          <TableOutlined /> Data
+        </span>
+      ),
+      children: (
+        <div className="mave-panel-card">
+          {/* Import / Export */}
+          <div className="flex items-center justify-between gap-4 flex-wrap mave-io-toolbar">
+            <CSVImportSection
+              headers={headers}
+              rows={rows}
+              setHeaders={setHeaders}
+              setRows={setRows}
+            />
+            <Button
+              icon={<DownloadOutlined />}
+              onClick={handleExportCSV}
+              className="mavecancelbutton"
+            >
+              Export CSV
+            </Button>
+          </div>
+
+          {/* Column Headers + Visibility + Reordering */}
+          <HeadersSection
+            headers={headers}
+            setHeaders={setHeaders}
+            visibleColumns={visibleColumns}
+            setVisibleColumns={setVisibleColumns}
+            rows={rows}
+            setRows={setRows}
+            filterColumns={filterColumns}
+            setFilterColumns={setFilterColumns}
+          />
+
+          {/* Rows */}
+          <RowsSection headers={headers} rows={rows} setRows={setRows} />
+        </div>
+      ),
+    },
+    {
+      key: "filters",
+      label: (
+        <span>
+          <FilterOutlined /> Filters
+        </span>
+      ),
+      children: (
+        <div className="mave-panel-card">
+          <Title level={4}>Filterable Columns</Title>
+          <FilterableColumns
+            headers={headers}
+            filterColumns={filterColumns}
+            setFilterColumns={setFilterColumns}
+          />
+        </div>
+      ),
+    },
+    {
+      key: "preview",
+      label: (
+        <span>
+          <EyeOutlined /> Preview
+        </span>
+      ),
+      children: (
+        <div className="mave-panel-card">
+          <PreviewTable
+            headers={headers}
+            rows={rows}
+            visibleColumns={visibleColumns}
+            filterColumns={filterColumns}
+          />
+        </div>
+      ),
+    },
+  ];
+
+  const drawerTitle = (
+    <div className="flex items-center justify-between flex-wrap gap-2">
+      <div className="flex items-center gap-2">
+        <TableOutlined style={{ fontSize: 20 }} />
+        <span>Configure Table</span>
+      </div>
+      <div className="flex items-center gap-2">
+        <Tag className="mave-stat-chip">{headers?.length || 0} Columns</Tag>
+        <Tag className="mave-stat-chip">{rows?.length || 0} Rows</Tag>
+        <Tag className="mave-stat-chip">{filterColumns?.length || 0} Filters</Tag>
+      </div>
+    </div>
+  );
+
   return (
     <Drawer
-      title="Configure Table"
+      title={drawerTitle}
       placement="right"
       closable
       onClose={handleCancel}
       open={isVisible}
       width="70vw"
+      className="table-config-drawer"
       footer={
         <div style={{ textAlign: "right" }}>
           <Button
+            icon={<CloseOutlined />}
             onClick={handleCancel}
             style={{ marginRight: 8 }}
             className="mavecancelbutton"
           >
             Cancel
           </Button>
-          <Button onClick={handleSave} className="mavebutton">
+          <Button icon={<SaveOutlined />} onClick={handleSave} className="mavebutton">
             Save Table
           </Button>
         </div>
       }
     >
       <Form form={form} layout="vertical">
-        {/* 1) CSV Import */}
-        <CSVImportSection setHeaders={setHeaders} setRows={setRows} />
-
-        {/* 2) Column Headers + Visibility + Reordering */}
-        <HeadersSection
-          headers={headers}
-          setHeaders={setHeaders}
-          visibleColumns={visibleColumns}
-          setVisibleColumns={setVisibleColumns}
-          rows={rows}
-          setRows={setRows}
-          filterColumns={filterColumns}
-          setFilterColumns={setFilterColumns}
-        />
-
-        {/* 3) Rows */}
-        <RowsSection headers={headers} rows={rows} setRows={setRows} />
-
-        <div className="grid grid-cols-10 items-center">
-          <Title level={4} className="col-span-7">
-            Preview
-          </Title>
-          <div className="col-span-3">
-            {/* 4) Filterable Columns */}
-            <Title level={4}>Filterable Columns</Title>
-            <FilterableColumns
-              headers={headers}
-              filterColumns={filterColumns}
-              setFilterColumns={setFilterColumns}
-            />
-          </div>
-        </div>
-
-        {/* 5) Preview */}
-        <PreviewTable
-          headers={headers}
-          rows={rows}
-          visibleColumns={visibleColumns}
-          filterColumns={filterColumns}
-        />
+        <Tabs items={tabItems} />
       </Form>
     </Drawer>
   );

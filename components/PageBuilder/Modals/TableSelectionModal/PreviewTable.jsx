@@ -1,8 +1,10 @@
 // TableSelectionModal/PreviewTable.jsx
 
 import React, { useMemo, useState } from "react";
-import { Table, Input, Button, Space } from "antd";
-import { SearchOutlined } from "@ant-design/icons";
+import { Table, Input, Button, Space, Typography, Tag, Empty } from "antd";
+import { SearchOutlined, EyeOutlined } from "@ant-design/icons";
+
+const { Title, Text } = Typography;
 
 const PreviewTable = ({ headers, visibleColumns, rows, filterColumns }) => {
   // For the text filter in antd
@@ -21,6 +23,9 @@ const PreviewTable = ({ headers, visibleColumns, rows, filterColumns }) => {
     setSearchedColIndex(null);
   };
 
+  const visibleCount = visibleColumns?.filter(Boolean).length || 0;
+  const hiddenCount = (headers?.length || 0) - visibleCount;
+
   // Build columns for <Table>
   const columns = useMemo(() => {
     return headers
@@ -33,6 +38,13 @@ const PreviewTable = ({ headers, visibleColumns, rows, filterColumns }) => {
           title: colObj.name,
           dataIndex: String(colIndex), // We'll map row arrays to an object
           key: colObj.id, // stable key
+          width: 220,
+          ellipsis: { showTitle: false },
+          render: (value) => (
+            <Text ellipsis={{ tooltip: value }} style={{ maxWidth: 200 }}>
+              {value || <span className="text-darkgray">—</span>}
+            </Text>
+          ),
         };
 
         // If this header is in filterColumns, we add the text filter dropdown
@@ -57,10 +69,10 @@ const PreviewTable = ({ headers, visibleColumns, rows, filterColumns }) => {
               />
               <Space>
                 <Button
-                  type="primary"
                   icon={<SearchOutlined />}
                   size="small"
                   style={{ width: 90 }}
+                  className="mavebutton"
                   onClick={() => handleSearch(selectedKeys, confirm, colIndex)}
                 >
                   Search
@@ -77,6 +89,12 @@ const PreviewTable = ({ headers, visibleColumns, rows, filterColumns }) => {
                 </Button>
               </Space>
             </div>
+          );
+
+          colDef.filterIcon = (filtered) => (
+            <SearchOutlined
+              style={{ color: filtered ? "var(--theme)" : undefined }}
+            />
           );
 
           colDef.onFilter = (value, record) => {
@@ -107,7 +125,45 @@ const PreviewTable = ({ headers, visibleColumns, rows, filterColumns }) => {
     });
   }, [rows]);
 
-  return <Table columns={columns} dataSource={dataSource} />;
+  return (
+    <div className="mave-preview-table">
+      <div className="flex items-center justify-between flex-wrap gap-2 mb-4">
+        <div>
+          <Title level={4} className="!mb-0">
+            <EyeOutlined className="mr-2" />
+            Live Preview
+          </Title>
+          <Text type="secondary" className="text-xs">
+            This is how the table will look on the page
+          </Text>
+        </div>
+        <div className="flex items-center gap-2">
+          <Tag className="mave-stat-chip">{visibleCount} Visible</Tag>
+          {hiddenCount > 0 && (
+            <Tag className="mave-stat-chip">{hiddenCount} Hidden</Tag>
+          )}
+          <Tag className="mave-stat-chip">{rows?.length || 0} Rows</Tag>
+        </div>
+      </div>
+
+      {columns.length === 0 ? (
+        <Empty description="All columns are hidden. Make at least one column visible to preview the table." />
+      ) : (
+        <Table
+          columns={columns}
+          dataSource={dataSource}
+          bordered
+          size="middle"
+          scroll={{ x: "max-content" }}
+          pagination={
+            dataSource.length > 8
+              ? { pageSize: 8, size: "small" }
+              : false
+          }
+        />
+      )}
+    </div>
+  );
 };
 
 export default PreviewTable;

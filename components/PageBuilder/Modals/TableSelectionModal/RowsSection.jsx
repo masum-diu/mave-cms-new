@@ -1,13 +1,22 @@
-import React, { useRef, useEffect } from "react";
+import React, { useRef, useEffect, useState } from "react";
 import { Form, Input, Button, Typography, Popconfirm, message } from "antd";
 import { PlusOutlined, MinusOutlined } from "@ant-design/icons";
 
-const { Title } = Typography;
+const { Title, Text } = Typography;
+const { TextArea } = Input;
+
+const CELL_WIDTH = 220;
+const NUM_COL_WIDTH = 44;
+const ACTION_COL_WIDTH = 44;
 
 const RowsSection = ({ headers, rows, setRows }) => {
   // We'll store references to each cell in a 2D array (row x col)
   // so we can programmatically move focus with arrow keys, tab, etc.
   const cellRefs = useRef([]);
+
+  // Only the focused cell renders as a multi-line, auto-growing textarea.
+  // Every other cell stays a single, truncated line so 30+ rows stay scannable.
+  const [focusedCell, setFocusedCell] = useState(null);
 
   // Ensure cellRefs always matches the shape of the rows array
   useEffect(() => {
@@ -50,117 +59,147 @@ const RowsSection = ({ headers, rows, setRows }) => {
     setRows(updated);
   };
 
-  // Handle keyboard navigation within the cell
+  // Handle keyboard navigation within the cell.
+  // Cells are multi-line text areas now, so arrow keys are left alone to move
+  // the text cursor; Enter moves to the next row and Shift+Enter inserts a
+  // line break, matching common spreadsheet behavior.
   const handleKeyDown = (e, rowIndex, colIndex) => {
     const { key, shiftKey } = e;
 
-    // Common movement logic: move focus to a specific cell if it exists
     const focusCell = (r, c) => {
       if (r >= 0 && r < rows.length && c >= 0 && c < headers.length) {
         cellRefs.current?.[r]?.[c]?.current?.focus();
       }
     };
 
-    switch (key) {
-      case "ArrowRight":
-        e.preventDefault();
-        focusCell(rowIndex, colIndex + 1);
-        break;
-      case "ArrowLeft":
-        e.preventDefault();
-        focusCell(rowIndex, colIndex - 1);
-        break;
-      case "ArrowUp":
-        e.preventDefault();
-        focusCell(rowIndex - 1, colIndex);
-        break;
-      case "ArrowDown":
-        e.preventDefault();
-        focusCell(rowIndex + 1, colIndex);
-        break;
-      case "Tab":
-        // We rely on the browser’s default Tab to jump to the next input,
-        // but we handle SHIFT+Tab to go backward if needed
-        // or do custom logic if you prefer full manual control.
-        if (!shiftKey) {
-          // default forward tab is okay
-        } else {
-          // shift+tab is okay, but handle if you want to override
-        }
-        break;
-      case "Enter":
-        // Move down one row, same column
-        e.preventDefault();
-        focusCell(rowIndex + 1, colIndex);
-        break;
-      default:
-        break;
+    if (key === "Enter" && !shiftKey) {
+      e.preventDefault();
+      focusCell(rowIndex + 1, colIndex);
     }
   };
 
+  const gridTemplateColumns = `${NUM_COL_WIDTH}px repeat(${headers.length}, ${CELL_WIDTH}px) ${ACTION_COL_WIDTH}px`;
+
   return (
     <div className="mt-10">
-      <Title level={4} className="mb-2">
-        Rows
-      </Title>
-
-      {/* 
-         Wrap your entire rows area in a horizontally-scrollable container
-         if there are more than 5 columns.
-       */}
-      <div
-        className={`my-4 border border-gray-300 rounded-md p-4 ${
-          headers.length > 5 ? "overflow-x-auto" : ""
-        }`}
-        style={{ maxWidth: "100%" }}
-      >
-        {/* We'll mimic a table by using a CSS grid or flex. 
-            Here, let's go with flex for each row, 
-            but you could also do display: table-row / table-cell if you prefer.
-        */}
-        {rows?.map((row, rowIndex) => (
-          <div key={rowIndex} className="flex flex-row items-stretch last:mb-0">
-            {headers.map((colObj, colIndex) => (
-              <Form.Item key={`${rowIndex}_${colIndex}`} className="!mb-0">
-                <Input
-                  placeholder={`Row ${rowIndex + 1} - ${colObj.name}`}
-                  value={row[colIndex]}
-                  onChange={(e) =>
-                    updateCell(e.target.value, rowIndex, colIndex)
-                  }
-                  onKeyDown={(e) => handleKeyDown(e, rowIndex, colIndex)}
-                  className="border-gray-300 text-center"
-                  ref={cellRefs.current?.[rowIndex]?.[colIndex]}
-                  style={{
-                    minWidth: "120px",
-                    borderRadius: 0,
-                    borderRight: "1px solid #ddd",
-                    borderBottom: "1px solid #ddd",
-                  }}
-                />
-              </Form.Item>
-            ))}
-            {/* Remove row button */}
-            {rows.length > 1 && (
-              <Popconfirm
-                title="Are you sure you want to delete this row?"
-                onConfirm={() => removeRow(rowIndex)}
-                okText="Yes"
-                cancelText="No"
-                okButtonProps={{ danger: true }}
-              >
-                <Button
-                  icon={<MinusOutlined />}
-                  type="text"
-                  style={{ marginLeft: 4 }}
-                />
-              </Popconfirm>
-            )}
-          </div>
-        ))}
+      <div className="flex items-center justify-between mb-2 flex-wrap gap-1">
+        <Title level={4} className="!mb-0">
+          Rows
+        </Title>
+        <Text type="secondary" className="text-xs">
+          Click a cell to expand it and see the full text while editing
+        </Text>
       </div>
 
-      <div className="flex justify-center">
+      <div
+        className="border border-bggray rounded-md"
+        style={{ maxHeight: "50vh", overflow: "auto" }}
+      >
+        <div style={{ width: "max-content", minWidth: "100%" }}>
+          {/* Sticky column header */}
+          <div
+            className="grid bg-themelite font-semibold text-xs text-black border-b border-theme"
+            style={{
+              gridTemplateColumns,
+              position: "sticky",
+              top: 0,
+              zIndex: 20,
+            }}
+          >
+            <div className="px-2 py-2 bg-themelite border-r border-theme sticky left-0 z-20" />
+            {headers.map((h) => (
+              <div
+                key={h.id}
+                className="px-3 py-2 border-r border-theme truncate"
+                title={h.name}
+              >
+                {h.name}
+              </div>
+            ))}
+            <div className="bg-themelite sticky right-0 z-20" />
+          </div>
+
+          {/* Data rows */}
+          {rows?.map((row, rowIndex) => (
+            <div
+              key={rowIndex}
+              className="grid group border-b border-bggray last:border-b-0 hover:bg-themelite"
+              style={{ gridTemplateColumns }}
+            >
+              <div
+                className="px-2 py-2 text-xs text-darkgray bg-white group-hover:bg-themelite sticky left-0 z-10 border-r border-bggray flex items-start"
+              >
+                {rowIndex + 1}
+              </div>
+
+              {headers.map((colObj, colIndex) => {
+                const isFocused =
+                  focusedCell?.row === rowIndex && focusedCell?.col === colIndex;
+
+                return (
+                  <Form.Item key={`${rowIndex}_${colIndex}`} className="!mb-0">
+                    <TextArea
+                      value={row[colIndex]}
+                      onChange={(e) =>
+                        updateCell(e.target.value, rowIndex, colIndex)
+                      }
+                      onKeyDown={(e) => handleKeyDown(e, rowIndex, colIndex)}
+                      onFocus={() =>
+                        setFocusedCell({ row: rowIndex, col: colIndex })
+                      }
+                      onBlur={() =>
+                        setFocusedCell((prev) =>
+                          prev?.row === rowIndex && prev?.col === colIndex
+                            ? null
+                            : prev
+                        )
+                      }
+                      ref={cellRefs.current?.[rowIndex]?.[colIndex]}
+                      autoSize={isFocused ? { minRows: 1, maxRows: 10 } : false}
+                      rows={1}
+                      style={{
+                        borderRadius: 0,
+                        border: "none",
+                        resize: "none",
+                        whiteSpace: isFocused ? "pre-wrap" : "nowrap",
+                        overflow: isFocused ? "auto" : "hidden",
+                        textOverflow: "ellipsis",
+                        position: "relative",
+                        zIndex: isFocused ? 4 : 1,
+                        background: isFocused ? "var(--white)" : "transparent",
+                        boxShadow: isFocused
+                          ? "inset 0 0 0 2px var(--theme)"
+                          : "none",
+                      }}
+                    />
+                  </Form.Item>
+                );
+              })}
+
+              <div className="flex items-start justify-center pt-1 bg-white group-hover:bg-themelite sticky right-0 z-10 border-l border-bggray">
+                {rows.length > 1 && (
+                  <Popconfirm
+                    title="Delete this row?"
+                    onConfirm={() => removeRow(rowIndex)}
+                    okText="Yes"
+                    cancelText="No"
+                    okButtonProps={{ danger: true }}
+                  >
+                    <Button
+                      icon={<MinusOutlined />}
+                      type="text"
+                      danger
+                      size="small"
+                    />
+                  </Popconfirm>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="flex justify-center mt-3">
         <Button onClick={addRow} icon={<PlusOutlined />} className="mavebutton">
           Add Row
         </Button>

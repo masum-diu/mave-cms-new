@@ -1,14 +1,35 @@
-import React from "react";
-import { Collapse, Typography, message, Upload } from "antd";
+import React, { useRef, useState } from "react";
+import { Button, Popconfirm, Typography, message } from "antd";
 import Papa from "papaparse";
 import { v4 as uuidv4 } from "uuid";
-import { UploadOutlined } from "@ant-design/icons";
+import { UploadOutlined, FileTextOutlined } from "@ant-design/icons";
 
-const { Title } = Typography;
-const { Dragger } = Upload;
+const { Text } = Typography;
 
-const CSVImportSection = ({ setHeaders, setRows }) => {
-  const handleCSVUpload = (file) => {
+// Treat the table as "empty" only if no header has a real name and no cell
+// has a value — that's when we can safely import without asking first.
+const hasExistingData = (headers, rows) => {
+  const hasNamedHeader = headers?.some((h) => h?.name?.trim());
+  const hasFilledCell = rows?.some((row) =>
+    row?.some((cell) => `${cell ?? ""}`.trim())
+  );
+  return Boolean(hasNamedHeader || hasFilledCell);
+};
+
+const CSVImportSection = ({ headers, rows, setHeaders, setRows }) => {
+  const fileInputRef = useRef(null);
+  const [lastImport, setLastImport] = useState(null);
+
+  const openFileDialog = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // allow re-selecting the same file later
+
+    if (!file) return;
+
     Papa.parse(file, {
       skipEmptyLines: true,
       complete: (result) => {
@@ -16,20 +37,25 @@ const CSVImportSection = ({ setHeaders, setRows }) => {
         if (data && data.length > 0) {
           // First row = CSV column names
           const csvHeaderStrings = data[0].map((h) => h.trim());
-          // Convert each to { id, name }
           const csvHeaders = csvHeaderStrings.map((colName) => ({
             id: uuidv4(),
             name: colName,
           }));
 
-          // Next rows = actual data
+          // Remaining rows = actual data
           const csvRows = data.slice(1);
 
-          // Update state
           setHeaders(csvHeaders);
           setRows(csvRows);
+          setLastImport({
+            name: file.name,
+            columns: csvHeaders.length,
+            rows: csvRows.length,
+          });
 
-          message.success("CSV imported successfully.");
+          message.success(
+            `Imported "${file.name}" — ${csvHeaders.length} columns, ${csvRows.length} rows.`
+          );
         } else {
           message.error("CSV file is empty or invalid.");
         }
@@ -38,54 +64,44 @@ const CSVImportSection = ({ setHeaders, setRows }) => {
         message.error("Failed to parse CSV file.");
       },
     });
-    // Return false to prevent Upload from auto-uploading files
-    return false;
   };
 
-  // These are the props you can spread into the Dragger
-  const draggerProps = {
-    name: "file",
-    multiple: false,
-    accept: ".csv",
-    showUploadList: false,
-    beforeUpload: handleCSVUpload, // or pass an inline arrow function if you prefer
-    onChange(info) {
-      // This callback fires when file status changes (e.g., file added, progress, done, error)
-      // If you only need to parse the CSV in `beforeUpload`, you can leave this empty
-      // but it's handy for hooking into the Upload lifecycle if needed.
-    },
-    onDrop(e) {
-      // Fires when a file is dropped onto the drop area
-      console.log("Dropped files", e.dataTransfer.files);
-    },
-  };
+  const importButton = (
+    <Button icon={<UploadOutlined />} className="mavebutton">
+      Import CSV
+    </Button>
+  );
 
   return (
-    <div className="csv-import-section flex flex-col items-center justify-center mb-10">
-      <Collapse
-        bordered={false}
-        // defaultActiveKey={["1"]}
-        expandIconPosition="right"
-        className="mt-4 border-2 bg-theme font-bold text-gray-700"
-      >
-        <Collapse.Panel
-          header="Import CSV"
-          key="1"
-          className="text-center text-xl"
+    <div className="flex items-center gap-3 flex-wrap">
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".csv"
+        onChange={handleFileChange}
+        style={{ display: "none" }}
+      />
+
+      {hasExistingData(headers, rows) ? (
+        <Popconfirm
+          title="Replace current table data?"
+          description="Importing a CSV will overwrite the existing columns and rows."
+          okText="Yes, import"
+          cancelText="Cancel"
+          onConfirm={openFileDialog}
         >
-          <Dragger {...draggerProps}>
-            <p className="ant-upload-drag-icon">
-              <UploadOutlined />
-            </p>
-            <p className="ant-upload-text">
-              Click or drag file to this area to upload
-            </p>
-            <p className="ant-upload-hint">
-              Support for a single or bulk upload.
-            </p>
-          </Dragger>
-        </Collapse.Panel>
-      </Collapse>
+          {importButton}
+        </Popconfirm>
+      ) : (
+        <span onClick={openFileDialog}>{importButton}</span>
+      )}
+
+      {lastImport && (
+        <Text type="secondary" className="text-xs flex items-center gap-1">
+          <FileTextOutlined /> {lastImport.name} · {lastImport.columns} cols ×{" "}
+          {lastImport.rows} rows
+        </Text>
+      )}
     </div>
   );
 };

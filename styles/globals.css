@@ -748,3 +748,110 @@ a:hover {
   font-size: 18px;
   font-weight: 500;
 }
+
+/* ── Table Configuration Drawer ── */
+.table-config-drawer .ant-drawer-header {
+  background: linear-gradient(135deg, var(--theme) 0%, var(--theme-dark) 100%);
+  border-bottom: none;
+  padding: 18px 24px;
+}
+
+.table-config-drawer .ant-drawer-title {
+  width: 100%;
+  color: var(--black);
+  font-weight: 700;
+}
+
+.table-config-drawer .ant-drawer-close {
+  color: var(--black);
+}
+
+.table-config-drawer .ant-drawer-body {
+  background: var(--gray);
+  padding: 24px;
+}
+
+.table-config-drawer .ant-drawer-footer {
+  background: var(--white);
+  border-top: 1px solid var(--gray);
+}
+
+.table-config-drawer .ant-tabs-nav {
+  margin-bottom: 20px;
+}
+
+.table-config-drawer .ant-tabs-tab {
+  padding: 8px 18px !important;
+  margin: 0 8px 0 0 !important;
+  background: var(--white);
+  border: 1px solid var(--gray) !important;
+  border-radius: 999px !important;
+  transition: all 0.2s ease;
+}
+
+.table-config-drawer .ant-tabs-tab .anticon {
+  margin-right: 6px;
+}
+
+.table-config-drawer .ant-tabs-tab.ant-tabs-tab-active {
+  background: var(--themelite);
+  border-color: var(--theme) !important;
+}
+
+.table-config-drawer .ant-tabs-ink-bar {
+  display: none;
+}
+
+.table-config-drawer .mave-panel-card {
+  background: #fff;
+  border-radius: var(--border-radius);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+  padding: 20px;
+}
+
+.table-config-drawer .mave-io-toolbar {
+  padding-bottom: 16px;
+  margin-bottom: 20px;
+  border-bottom: 1px dashed var(--theme);
+}
+
+.table-config-drawer .mave-stat-chip {
+  border-radius: 999px;
+  border: none;
+  background: var(--transparentwhite);
+  color: var(--black);
+  font-weight: 600;
+  padding: 2px 12px;
+}
+
+/* ── Live Preview Table ── */
+.mave-preview-table .ant-table {
+  border-radius: var(--border-radius);
+}
+
+.mave-preview-table .ant-table-thead > tr > th {
+  background: var(--themelite);
+  color: var(--black);
+  font-weight: 700;
+  border-bottom: 2px solid var(--theme);
+}
+
+.mave-preview-table .ant-table-thead > tr > th::before {
+  display: none;
+}
+
+.mave-preview-table .ant-table-tbody > tr:nth-child(even) > td {
+  background: var(--gray);
+}
+
+.mave-preview-table .ant-table-tbody > tr:hover > td {
+  background: var(--themelite) !important;
+}
+
+.mave-preview-table .ant-pagination-item-active {
+  border-color: var(--theme);
+}
+
+.mave-preview-table .ant-pagination-item-active a {
+  color: var(--theme);
+}

@@ -1,17 +1,19 @@
 // components/PageBuilder/Components/TableComponent.jsx
 
 import React, { useState, useEffect } from "react";
-import { Button, Typography, message, Popconfirm } from "antd";
+import { Button, Typography, message, Popconfirm, Table } from "antd";
 import {
   EditOutlined,
   DeleteOutlined,
   PlusOutlined,
   CopyFilled,
   DragOutlined,
+  DownloadOutlined,
 } from "@ant-design/icons";
+import Papa from "papaparse";
 import TableSelectionDrawer from "../Modals/TableSelectionModal/TableSelectionDrawer";
 
-const { Paragraph } = Typography;
+const { Paragraph, Text } = Typography;
 
 const TableComponent = ({
   component,
@@ -31,6 +33,13 @@ const TableComponent = ({
         title: header,
         dataIndex: `col${index}`,
         key: `col${index}`,
+        width: 220,
+        ellipsis: { showTitle: false },
+        render: (value) => (
+          <Text ellipsis={{ tooltip: value }} style={{ maxWidth: 200 }}>
+            {value || <span className="text-darkgray">—</span>}
+          </Text>
+        ),
       }));
       setColumns(cols);
       const rows = tableData.rows?.map((row, rowIndex) => ({
@@ -59,63 +68,46 @@ const TableComponent = ({
     deleteComponent();
   };
 
+  const handleExportCSV = () => {
+    if (!tableData?.headers?.length || !tableData?.rows?.length) {
+      message.info("There is no table data to export yet.");
+      return;
+    }
+
+    const csv = Papa.unparse({
+      fields: tableData.headers,
+      data: tableData.rows,
+    });
+
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "table-export.csv";
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+    message.success("Table exported successfully.");
+  };
+
   if (preview) {
     return (
       <div className="preview-table-component p-4 bg-gray-100 rounded-md">
         {tableData && tableData.headers && tableData.rows ? (
-          <div className="overflow-x-auto">
-            <table
-              className="min-w-full border-collapse"
-              style={{
-                border:
-                  tableData?.styles?.borderStyle === "none"
-                    ? "none"
-                    : tableData?.styles?.borderStyle === "thin"
-                      ? "1px solid #ddd"
-                      : "2px solid #000",
-                backgroundColor: tableData?.styles?.cellColor || "#fff",
-                textAlign: tableData?.styles?.textAlign || "left",
-              }}
-            >
-              <thead>
-                <tr>
-                  {columns?.map((col) => (
-                    <th
-                      key={col.key}
-                      className="px-4 py-2 border"
-                      style={{
-                        border:
-                          tableData?.styles?.borderStyle === "none"
-                            ? "none"
-                            : "1px solid #ddd",
-                      }}
-                    >
-                      {col.title}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {dataSource?.map((row) => (
-                  <tr key={row.key}>
-                    {columns?.map((col, index) => (
-                      <td
-                        key={col.key}
-                        className="px-4 py-2 border"
-                        style={{
-                          border:
-                            tableData?.styles?.borderStyle === "none"
-                              ? "none"
-                              : "1px solid #ddd",
-                        }}
-                      >
-                        {row[`col${index}`]}
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="mave-preview-table">
+            <Table
+              columns={columns}
+              dataSource={dataSource}
+              bordered
+              size="middle"
+              scroll={{ x: "max-content" }}
+              pagination={
+                dataSource?.length > 8
+                  ? { pageSize: 8, size: "small" }
+                  : false
+              }
+            />
           </div>
         ) : (
           <Paragraph className="text-gray-500">
@@ -141,7 +133,14 @@ const TableComponent = ({
                 onClick={() => setIsDrawerVisible(true)}
                 className="mavebutton"
               >
-                Update
+                Edit
+              </Button>
+              <Button
+                icon={<DownloadOutlined />}
+                onClick={handleExportCSV}
+                className="mavebutton"
+              >
+                Export
               </Button>
               <Button
                 icon={<CopyFilled />}
@@ -166,59 +165,19 @@ const TableComponent = ({
       </div>
 
       {tableData && tableData.headers && tableData.rows ? (
-        <div className="overflow-x-auto">
-          <table
-            className="min-w-full border-collapse"
-            style={{
-              border:
-                tableData?.styles?.borderStyle === "none"
-                  ? "none"
-                  : tableData?.styles?.borderStyle === "thin"
-                    ? "1px solid #ddd"
-                    : "2px solid #000",
-              backgroundColor: tableData?.styles?.cellColor || "#fff",
-              textAlign: tableData?.styles?.textAlign || "left",
-            }}
-          >
-            <thead>
-              <tr>
-                {columns?.map((col) => (
-                  <th
-                    key={col.key}
-                    className="px-4 py-2 border"
-                    style={{
-                      border:
-                        tableData?.styles?.borderStyle === "none"
-                          ? "none"
-                          : "1px solid #ddd",
-                    }}
-                  >
-                    {col.title}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {dataSource?.map((row) => (
-                <tr key={row.key}>
-                  {columns?.map((col, index) => (
-                    <td
-                      key={col.key}
-                      className="px-4 py-2 border"
-                      style={{
-                        border:
-                          tableData?.styles?.borderStyle === "none"
-                            ? "none"
-                            : "1px solid #ddd",
-                      }}
-                    >
-                      {row[`col${index}`]}
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="mave-preview-table">
+          <Table
+            columns={columns}
+            dataSource={dataSource}
+            bordered
+            size="middle"
+            scroll={{ x: "max-content" }}
+            pagination={
+              dataSource?.length > 8
+                ? { pageSize: 8, size: "small" }
+                : false
+            }
+          />
         </div>
       ) : (
         <Button

@@ -62,7 +62,7 @@ const SortableHeaderItem = ({
     <div
       ref={setNodeRef}
       style={style}
-      className="flex justify-between items-center bg-white my-2 rounded-lg py-2 px-4 gap-2 border-2 border-gray-300 shadow-md"
+      className="flex justify-between items-center bg-white my-2 rounded-lg py-2 px-4 gap-2 border-2 border-bggray shadow-md"
     >
       <div className="flex items-center gap-2">
         {/* Drag handle */}
@@ -221,7 +221,7 @@ const HeadersSection = ({
           items={headers.map((header) => header.id)}
           strategy={verticalListSortingStrategy}
         >
-          <div className="bg-orange-100 p-4 rounded-lg flex flex-row flex-wrap gap-4 border-2 border-gray-400">
+          <div className="bg-themelite p-4 rounded-lg flex flex-row flex-wrap gap-4 border-2 border-theme">
             {headers.map((colObj, index) => (
               <SortableHeaderItem
                 key={colObj.id}
