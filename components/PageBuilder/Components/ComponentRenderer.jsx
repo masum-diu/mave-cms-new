@@ -20,11 +20,11 @@ import TestimonialComponent from "./TestimonialComponent/TestimonialComponent";
 import TitleDescriptionComponent from "./TitleDescriptionComponent";
 import FormComponent from "./FormComponent";
 import InfoBoxComponent from "./InfoBoxComponent/InfoBoxComponent";
-import { useDispatch, useSelector } from "react-redux";
+import { useDispatch } from "react-redux";
 import {
-  setPageData,
-  setIsDirty,
   duplicateComponent,
+  updateSectionComponent,
+  deleteSectionComponent,
 } from "../../../store/slices/pageSlice";
 
 const COMPONENT_MAP = {
@@ -60,7 +60,6 @@ const ComponentRenderer = React.memo(
     isEditing = false,
   }) => {
     const dispatch = useDispatch();
-    const pageData = useSelector((state) => state.page.pageData);
 
     // Handle editing state changes
     const handleEditingStateChange = useCallback(
@@ -79,26 +78,16 @@ const ComponentRenderer = React.memo(
           onUpdate(updatedComponent);
         } else {
           // Fallback to old system
-          const updatedPageData = {
-            ...pageData,
-            body: pageData.body.map((section, idx) => {
-              if (idx === component.sectionIndex) {
-                return {
-                  ...section,
-                  data: section.data.map((comp, compIdx) =>
-                    compIdx === component.index ? updatedComponent : comp
-                  ),
-                };
-              }
-              return section;
-            }),
-          };
-
-          dispatch(setPageData(updatedPageData));
-          dispatch(setIsDirty(true));
+          dispatch(
+            updateSectionComponent({
+              sectionIndex: component.sectionIndex,
+              componentIndex: component.index,
+              updatedComponent,
+            })
+          );
         }
       },
-      [onUpdate, dispatch, pageData, component]
+      [onUpdate, dispatch, component]
     );
 
     const deleteComponent = useCallback(() => {
@@ -112,24 +101,14 @@ const ComponentRenderer = React.memo(
         onDelete();
       } else {
         // Fallback to old system
-        const updatedPageData = {
-          ...pageData,
-          body: pageData.body.map((section, idx) => {
-            if (idx === component.sectionIndex) {
-              return {
-                ...section,
-                data: section.data.filter(
-                  (_, compIdx) => compIdx !== component.index
-                ),
-              };
-            }
-            return section;
-          }),
-        };
-        dispatch(setPageData(updatedPageData));
-        dispatch(setIsDirty(true));
+        dispatch(
+          deleteSectionComponent({
+            sectionIndex: component.sectionIndex,
+            componentIndex: component.index,
+          })
+        );
       }
-    }, [onDelete, dispatch, pageData, component]);
+    }, [onDelete, dispatch, component]);
 
     const handleDuplicate = useCallback(() => {
       if (onDuplicate) {

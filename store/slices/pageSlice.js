@@ -94,6 +94,38 @@ const pageSlice = createSlice({
       state.pageData.body.data = buildSectionsObject(sections);
       state.isDirty = true;
     },
+    updateSectionComponent: (state, action) => {
+      const { sectionIndex, componentIndex, updatedComponent } = action.payload;
+      if (!state.pageData?.body?.data) return;
+
+      const sections = getSectionsArray(state.pageData.body.data);
+      const comps = getComponentsArray(sections[sectionIndex]?.components);
+      if (componentIndex < 0 || componentIndex >= comps.length) return;
+
+      comps[componentIndex] = updatedComponent;
+      sections[sectionIndex] = {
+        ...sections[sectionIndex],
+        components: buildComponentsObject(comps),
+      };
+      state.pageData.body.data = buildSectionsObject(sections);
+      state.isDirty = true;
+    },
+    deleteSectionComponent: (state, action) => {
+      const { sectionIndex, componentIndex } = action.payload;
+      if (!state.pageData?.body?.data) return;
+
+      const sections = getSectionsArray(state.pageData.body.data);
+      const comps = getComponentsArray(sections[sectionIndex]?.components);
+      if (componentIndex < 0 || componentIndex >= comps.length) return;
+
+      comps.splice(componentIndex, 1);
+      sections[sectionIndex] = {
+        ...sections[sectionIndex],
+        components: buildComponentsObject(comps),
+      };
+      state.pageData.body.data = buildSectionsObject(sections);
+      state.isDirty = true;
+    },
   },
 });
 
@@ -105,7 +137,9 @@ export const pageMiddleware = (store) => (next) => (action) => {
   if (
     action.type === "page/updateSection" ||
     action.type === "page/moveComponent" ||
-    action.type === "page/duplicateComponent"
+    action.type === "page/duplicateComponent" ||
+    action.type === "page/updateSectionComponent" ||
+    action.type === "page/deleteSectionComponent"
   ) {
     const state = store.getState();
     store.dispatch(pushToHistory(state.page.pageData));
@@ -123,6 +157,8 @@ export const {
   updateSection,
   moveComponent,
   duplicateComponent,
+  updateSectionComponent,
+  deleteSectionComponent,
 } = pageSlice.actions;
 
 export default pageSlice.reducer;
