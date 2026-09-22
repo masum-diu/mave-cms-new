@@ -60,7 +60,7 @@ const TestimonialItem = ({
       {testimonial.image && (
         <Image
           src={getImageUrl()}
-          alt={testimonial.author}
+          alt={testimonial.author_en || testimonial.author}
           className="w-full h-32 object-cover rounded-md mb-4"
           layout="responsive"
           width={250}
@@ -68,9 +68,21 @@ const TestimonialItem = ({
           objectFit="cover"
         />
       )}
-      <p className="italic">"{testimonial.quote}"</p>
+      <p className="italic">"{testimonial.quote_en || testimonial.quote}"</p>
+      {testimonial.quote_bn && (
+        <p className="italic text-gray-600 mt-1">"{testimonial.quote_bn}"</p>
+      )}
       <div className="flex justify-between items-center mt-4">
-        <span className="font-semibold">{testimonial.author}</span>
+        <div>
+          <div className="font-semibold">
+            {testimonial.author_en || testimonial.author}
+          </div>
+          {testimonial.author_bn && (
+            <div className="text-sm text-gray-500">
+              {testimonial.author_bn}
+            </div>
+          )}
+        </div>
         <Rate disabled defaultValue={testimonial.rating} />
       </div>
     </Card>

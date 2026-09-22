@@ -1,7 +1,16 @@
 // components/PageBuilder/Components/TestimonialComponent/TestimonialComponent.jsx
 
 import React, { useState } from "react";
-import { Button, Form, message, Typography, Space, Popconfirm } from "antd";
+import {
+  Button,
+  Form,
+  message,
+  Typography,
+  Space,
+  Popconfirm,
+  Drawer,
+  Tooltip,
+} from "antd";
 import {
   PlusOutlined,
   EditOutlined,
@@ -15,6 +24,16 @@ import TestimonialForm from "./TestimonialForm";
 
 const { Paragraph } = Typography;
 
+// Fills quote_en/quote_bn/author_en/author_bn from legacy flat
+// quote/author fields so older testimonials keep editing correctly.
+const normalizeTestimonial = (t) => ({
+  ...t,
+  quote_en: t.quote_en ?? t.quote ?? "",
+  quote_bn: t.quote_bn ?? "",
+  author_en: t.author_en ?? t.author ?? "",
+  author_bn: t.author_bn ?? "",
+});
+
 const TestimonialComponent = ({
   component,
   updateComponent,
@@ -23,7 +42,7 @@ const TestimonialComponent = ({
   onDuplicateElement,
 }) => {
   const [testimonials, setTestimonials] = useState(
-    component._mave?.testimonials || []
+    (component._mave?.testimonials || []).map(normalizeTestimonial)
   );
   const [isEditMode, setIsEditMode] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
@@ -71,8 +90,10 @@ const TestimonialComponent = ({
   const handleAddSubmit = (values) => {
     const newTestimonial = {
       id: Date.now(),
-      quote: values.quote,
-      author: values.author,
+      quote_en: values.quote_en,
+      quote_bn: values.quote_bn,
+      author_en: values.author_en,
+      author_bn: values.author_bn,
       rating: values.rating,
       image: selectedImage,
     };
@@ -87,23 +108,29 @@ const TestimonialComponent = ({
 
   const handleEditTestimonial = (testimonial) => {
     if (!preview && isEditMode) {
-      setCurrentEdit(testimonial);
+      const normalized = normalizeTestimonial(testimonial);
+      setCurrentEdit(normalized);
       setIsEditing(true);
-      setSelectedImage(testimonial.image);
+      setSelectedImage(normalized.image);
       editForm.setFieldsValue({
-        quote: testimonial.quote,
-        author: testimonial.author,
-        rating: testimonial.rating,
-        image: testimonial.image,
+        quote_en: normalized.quote_en,
+        quote_bn: normalized.quote_bn,
+        author_en: normalized.author_en,
+        author_bn: normalized.author_bn,
+        rating: normalized.rating,
+        image: normalized.image,
       });
     }
   };
 
   const handleEditSubmit = (values) => {
+    const { quote, author, ...rest } = currentEdit; // drop legacy flat fields
     const updatedTestimonial = {
-      ...currentEdit,
-      quote: values.quote,
-      author: values.author,
+      ...rest,
+      quote_en: values.quote_en,
+      quote_bn: values.quote_bn,
+      author_en: values.author_en,
+      author_bn: values.author_bn,
       rating: values.rating,
       image: selectedImage,
     };
@@ -158,13 +185,15 @@ const TestimonialComponent = ({
           <Space>
             {isEditMode ? (
               <>
-                <Button
-                  className="mavebutton"
-                  type="primary"
-                  onClick={handleEditModeToggle}
-                >
-                  Save Changes
-                </Button>
+                <Tooltip title="Testimonials save automatically — this saves your layout/style settings and exits edit mode">
+                  <Button
+                    className="mavebutton"
+                    type="primary"
+                    onClick={handleEditModeToggle}
+                  >
+                    Done Editing
+                  </Button>
+                </Tooltip>
                 <Button
                   className="mavecancelbutton"
                   onClick={() => setIsEditMode(false)}
@@ -202,56 +231,73 @@ const TestimonialComponent = ({
       )}
 
       {!preview && isEditMode && (
-        <Space direction="vertical" style={{ width: "100%" }}>
-          <ConfigSection
-            layout={layout}
-            font={font}
-            color={color}
-            background={background}
-            handleLayoutChange={setLayout}
-            handleFontChange={setFont}
-            handleColorChange={(e) => setColor(e.target.value)}
-            handleBackgroundChange={(e) => setBackground(e.target.value)}
-            preview={preview}
-          />
-
-          {isAdding && (
-            <div className="mb-6 p-4 border rounded-md bg-gray-50">
-              <h4 className="text-lg font-medium mb-4">Add New Testimonial</h4>
-              <TestimonialForm
-                form={form}
-                onFinish={handleAddSubmit}
-                selectedImage={selectedImage}
-                onImageSelect={() => setIsImageModalVisible(true)}
-                onCancel={() => {
-                  setIsAdding(false);
-                  setSelectedImage(null);
-                  form.resetFields();
-                }}
-              />
-            </div>
-          )}
-
-          {isEditing && currentEdit && (
-            <div className="mb-6 p-4 border rounded-md bg-gray-50">
-              <h4 className="text-lg font-medium mb-4">Edit Testimonial</h4>
-              <TestimonialForm
-                form={editForm}
-                onFinish={handleEditSubmit}
-                selectedImage={selectedImage}
-                onImageSelect={() => setIsImageModalVisible(true)}
-                onCancel={() => {
-                  setIsEditing(false);
-                  setCurrentEdit(null);
-                  setSelectedImage(null);
-                  editForm.resetFields();
-                }}
-                isEdit={true}
-              />
-            </div>
-          )}
-        </Space>
+        <ConfigSection
+          layout={layout}
+          font={font}
+          color={color}
+          background={background}
+          handleLayoutChange={setLayout}
+          handleFontChange={setFont}
+          handleColorChange={(e) => setColor(e.target.value)}
+          handleBackgroundChange={(e) => setBackground(e.target.value)}
+          preview={preview}
+        />
       )}
+
+      <Drawer
+        title="Add New Testimonial"
+        placement="right"
+        width={480}
+        open={isAdding}
+        destroyOnClose
+        onClose={() => {
+          setIsAdding(false);
+          setSelectedImage(null);
+          form.resetFields();
+        }}
+      >
+        <TestimonialForm
+          form={form}
+          onFinish={handleAddSubmit}
+          selectedImage={selectedImage}
+          onImageSelect={() => setIsImageModalVisible(true)}
+          onCancel={() => {
+            setIsAdding(false);
+            setSelectedImage(null);
+            form.resetFields();
+          }}
+        />
+      </Drawer>
+
+      <Drawer
+        title="Edit Testimonial"
+        placement="right"
+        width={480}
+        open={isEditing && Boolean(currentEdit)}
+        destroyOnClose
+        onClose={() => {
+          setIsEditing(false);
+          setCurrentEdit(null);
+          setSelectedImage(null);
+          editForm.resetFields();
+        }}
+      >
+        {isEditing && currentEdit && (
+          <TestimonialForm
+            form={editForm}
+            onFinish={handleEditSubmit}
+            selectedImage={selectedImage}
+            onImageSelect={() => setIsImageModalVisible(true)}
+            onCancel={() => {
+              setIsEditing(false);
+              setCurrentEdit(null);
+              setSelectedImage(null);
+              editForm.resetFields();
+            }}
+            isEdit={true}
+          />
+        )}
+      </Drawer>
 
       <TestimonialDisplay
         testimonials={testimonials}
@@ -266,7 +312,7 @@ const TestimonialComponent = ({
         isEditMode={isEditMode}
       />
 
-      {!isAdding && !isEditing && (
+      {!preview && isEditMode && !isAdding && !isEditing && (
         <div className="flex justify-center">
           <Button
             type="dashed"

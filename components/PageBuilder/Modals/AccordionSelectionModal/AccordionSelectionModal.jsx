@@ -10,6 +10,7 @@ import {
   Select,
   ColorPicker,
   Collapse,
+  ConfigProvider,
 } from "antd";
 import {
   PlusOutlined,
@@ -30,6 +31,16 @@ const toAccordionItems = (value) => {
   return [];
 };
 
+// Fills title_en/title_bn/content_en/content_bn from legacy flat
+// title/content fields so older accordion items keep editing correctly.
+const normalizeItem = (item) => ({
+  ...item,
+  title_en: item.title_en ?? item.title ?? "",
+  title_bn: item.title_bn ?? "",
+  content_en: item.content_en ?? item.content ?? "",
+  content_bn: item.content_bn ?? "",
+});
+
 const AccordionSelectionModal = ({
   isVisible,
   onClose,
@@ -38,12 +49,13 @@ const AccordionSelectionModal = ({
 }) => {
   const [form] = Form.useForm();
   const [accordionItems, setAccordionItems] = useState(() =>
-    toAccordionItems(initialData)
+    toAccordionItems(initialData).map(normalizeItem)
   );
   const [showStyleConfig, setShowStyleConfig] = useState({});
+  const [langTab, setLangTab] = useState("en");
 
   useEffect(() => {
-    const items = toAccordionItems(initialData);
+    const items = toAccordionItems(initialData).map(normalizeItem);
     setAccordionItems(items);
     // Initialize showStyleConfig for each item
     const initialStyleConfig = {};
@@ -55,8 +67,10 @@ const AccordionSelectionModal = ({
 
   const handleAddItem = () => {
     const newItem = {
-      title: "",
-      content: "",
+      title_en: "",
+      title_bn: "",
+      content_en: "",
+      content_bn: "",
       contentType: "text",
       style: {
         headerBg: "#ffffff",
@@ -82,27 +96,32 @@ const AccordionSelectionModal = ({
 
   const handleSubmit = () => {
     form.validateFields().then((values) => {
-      const updatedItems = accordionItems.map((item, index) => ({
-        ...item,
-        title: values[`title_${index}`],
-        contentType: values[`contentType_${index}`],
-        style: {
-          headerBg: values[`headerBg_${index}`] || "#ffffff",
-          headerTextColor: values[`headerTextColor_${index}`] || "#000000",
-          contentBg: values[`contentBg_${index}`] || "#ffffff",
-          contentTextColor: values[`contentTextColor_${index}`] || "#000000",
-          borderColor: values[`borderColor_${index}`] || "#e5e7eb",
-          borderRadius: values[`borderRadius_${index}`] || "8px",
-        },
-      }));
+      const updatedItems = accordionItems.map((item, index) => {
+        const { title, content, ...rest } = item; // drop legacy flat fields
+        return {
+          ...rest,
+          title_en: values[`title_en_${index}`],
+          title_bn: values[`title_bn_${index}`],
+          contentType: values[`contentType_${index}`],
+          style: {
+            headerBg: values[`headerBg_${index}`] || "#ffffff",
+            headerTextColor: values[`headerTextColor_${index}`] || "#000000",
+            contentBg: values[`contentBg_${index}`] || "#ffffff",
+            contentTextColor: values[`contentTextColor_${index}`] || "#000000",
+            borderColor: values[`borderColor_${index}`] || "#e5e7eb",
+            borderRadius: values[`borderRadius_${index}`] || "8px",
+          },
+        };
+      });
       onSelectAccordion(updatedItems);
     });
   };
 
-  const handleContentChange = (content, index) => {
+  const handleContentChange = (content, index, lang) => {
+    const field = lang === "bn" ? "content_bn" : "content_en";
     const newItems = accordionItems.map((item, i) => {
       if (i === index) {
-        return { ...item, content };
+        return { ...item, [field]: content };
       }
       return item;
     });
@@ -117,6 +136,14 @@ const AccordionSelectionModal = ({
   };
 
   return (
+    <ConfigProvider
+      theme={{
+        token: {
+          colorPrimary: "#fcb813",
+          colorTextLightSolid: "#000000",
+        },
+      }}
+    >
     <Drawer
       title="Configure Accordion"
       placement="right"
@@ -132,6 +159,40 @@ const AccordionSelectionModal = ({
         </Space>
       }
     >
+      <div
+        style={{
+          display: "flex",
+          borderRadius: 8,
+          overflow: "hidden",
+          border: "1px solid var(--theme-dark)",
+          marginBottom: 20,
+        }}
+      >
+        {[
+          { key: "en", label: "English" },
+          { key: "bn", label: "বাংলা" },
+        ].map(({ key, label }) => (
+          <button
+            key={key}
+            type="button"
+            onClick={() => setLangTab(key)}
+            style={{
+              flex: 1,
+              height: 40,
+              border: "none",
+              background: langTab === key ? "var(--theme)" : "#f9fafb",
+              color: langTab === key ? "#000" : "#6b7280",
+              fontWeight: langTab === key ? 700 : 500,
+              fontSize: "0.9rem",
+              cursor: "pointer",
+              transition: "all 0.15s",
+            }}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
       <Form form={form} layout="vertical">
         {accordionItems.map((item, index) => (
           <div
@@ -157,14 +218,26 @@ const AccordionSelectionModal = ({
               </Space>
             </div>
 
-            <Form.Item
-              label="Title"
-              name={`title_${index}`}
-              initialValue={item.title}
-              rules={[{ required: true, message: "Please enter a title" }]}
-            >
-              <Input placeholder="Enter title" />
-            </Form.Item>
+            <div style={{ display: langTab === "en" ? "block" : "none" }}>
+              <Form.Item
+                label="Title (English)"
+                name={`title_en_${index}`}
+                initialValue={item.title_en}
+                rules={[{ required: true, message: "Please enter a title" }]}
+              >
+                <Input placeholder="Enter title in English" />
+              </Form.Item>
+            </div>
+
+            <div style={{ display: langTab === "bn" ? "block" : "none" }}>
+              <Form.Item
+                label="শিরোনাম (Title in বাংলা)"
+                name={`title_bn_${index}`}
+                initialValue={item.title_bn}
+              >
+                <Input placeholder="বাংলায় শিরোনাম লিখুন" />
+              </Form.Item>
+            </div>
 
             <Form.Item
               label="Content Type"
@@ -177,13 +250,29 @@ const AccordionSelectionModal = ({
               </Select>
             </Form.Item>
 
-            <Form.Item label="Content">
-              <RichTextEditor
-                defaultValue={item.content}
-                onChange={(content) => handleContentChange(content, index)}
-                editMode={true}
-              />
-            </Form.Item>
+            <div style={{ display: langTab === "en" ? "block" : "none" }}>
+              <Form.Item label="Content (English)">
+                <RichTextEditor
+                  defaultValue={item.content_en}
+                  onChange={(content) =>
+                    handleContentChange(content, index, "en")
+                  }
+                  editMode={true}
+                />
+              </Form.Item>
+            </div>
+
+            <div style={{ display: langTab === "bn" ? "block" : "none" }}>
+              <Form.Item label="বিবরণ (Content in বাংলা)">
+                <RichTextEditor
+                  defaultValue={item.content_bn}
+                  onChange={(content) =>
+                    handleContentChange(content, index, "bn")
+                  }
+                  editMode={true}
+                />
+              </Form.Item>
+            </div>
 
             {showStyleConfig[index] && (
               <div className="mt-4">
@@ -258,6 +347,7 @@ const AccordionSelectionModal = ({
         </Button>
       </Form>
     </Drawer>
+    </ConfigProvider>
   );
 };
 

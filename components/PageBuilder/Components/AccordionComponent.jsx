@@ -85,10 +85,11 @@ const AccordionComponent = ({
     });
   };
 
-  const handleContentChange = (content, index) => {
+  const handleContentChange = (content, index, lang = "en") => {
+    const field = lang === "bn" ? "content_bn" : "content_en";
     const newData = toAccordionItems(accordionData).map((item, i) => {
       if (i === index) {
-        return { ...item, content };
+        return { ...item, [field]: content };
       }
       return item;
     });
@@ -124,8 +125,19 @@ const AccordionComponent = ({
                 }}
               >
                 <Text strong className="text-lg">
-                  {item.title}
+                  {item.title_en || item.title}
                 </Text>
+                {item.title_bn && (
+                  <div>
+                    <Text
+                      strong
+                      className="text-base"
+                      style={{ color: headerTextColor, opacity: 0.85 }}
+                    >
+                      {item.title_bn}
+                    </Text>
+                  </div>
+                )}
               </div>
             </div>
           }
@@ -141,12 +153,28 @@ const AccordionComponent = ({
         >
           <div className="pl-4">
             {item.contentType === "text" ? (
-              <div className="accordion-content">
+              <div className="accordion-content space-y-3">
                 <RichTextEditor
-                  defaultValue={item.content}
-                  onChange={(content) => handleContentChange(content, index)}
+                  defaultValue={item.content_en || item.content}
+                  onChange={(content) =>
+                    handleContentChange(content, index, "en")
+                  }
                   editMode={!preview}
                 />
+                {(item.content_bn || !preview) && (
+                  <div>
+                    <Text type="secondary" className="text-xs block mb-1">
+                      বাংলা
+                    </Text>
+                    <RichTextEditor
+                      defaultValue={item.content_bn}
+                      onChange={(content) =>
+                        handleContentChange(content, index, "bn")
+                      }
+                      editMode={!preview}
+                    />
+                  </div>
+                )}
               </div>
             ) : item.contentType === "accordion" ? (
               <AccordionComponent
@@ -209,10 +237,9 @@ const AccordionComponent = ({
         <Space>
           <Tooltip title="Edit Component">
             <Button
-              type="primary"
               icon={<EditOutlined />}
               onClick={() => setIsModalVisible(true)}
-              className="flex items-center"
+              className="mavebutton flex items-center"
               disabled={preview}
             >
               Edit
