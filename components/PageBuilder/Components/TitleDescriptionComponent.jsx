@@ -59,10 +59,13 @@ const TitleDescriptionComponent = ({
   const [isEditing, setIsEditing] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const [pages, setPages] = useState([]);
+  const [langTab, setLangTab] = useState("en");
   const [formData, setFormData] = useState({
     title: "",
+    title_bn: "",
     altTitle: "",
     description: "",
+    description_bn: "",
     altDescription: "",
     linkType: "independent",
     link: "",
@@ -97,8 +100,10 @@ const TitleDescriptionComponent = ({
     if (component?._mave) {
       const {
         title = "",
+        title_bn = "",
         altTitle = "",
         description = "",
+        description_bn = "",
         altDescription = "",
         linkType = "independent",
         link = "",
@@ -114,8 +119,10 @@ const TitleDescriptionComponent = ({
       } = component._mave;
       setFormData({
         title,
+        title_bn,
         altTitle,
         description,
+        description_bn,
         altDescription,
         linkType,
         link,
@@ -149,8 +156,10 @@ const TitleDescriptionComponent = ({
       const orig = component._mave;
       setFormData({
         title: orig.title || "",
+        title_bn: orig.title_bn || "",
         altTitle: orig.altTitle || "",
         description: orig.description || "",
+        description_bn: orig.description_bn || "",
         altDescription: orig.altDescription || "",
         linkType: orig.linkType || "independent",
         link: orig.link || "",
@@ -242,8 +251,10 @@ const TitleDescriptionComponent = ({
   if (preview) {
     const {
       title,
+      title_bn,
       altTitle,
       description,
+      description_bn,
       altDescription,
       link,
       isExternal,
@@ -274,12 +285,29 @@ const TitleDescriptionComponent = ({
               </span>
             )}
           </div>
+          {title_bn && (
+            <div
+              className={`${getFontSizeClass(formData.titleFontSize)} text-gray-700`}
+              style={{
+                fontWeight: formData.titleFontWeight,
+                textAlign: formData.titleAlign,
+              }}
+            >
+              {title_bn}
+            </div>
+          )}
           <div
             className="prose max-w-none"
             dangerouslySetInnerHTML={{
               __html: description || "No Description",
             }}
           />
+          {description_bn && (
+            <div
+              className="prose max-w-none text-gray-600"
+              dangerouslySetInnerHTML={{ __html: description_bn }}
+            />
+          )}
           {altDescription && (
             <div
               className="prose max-w-none italic text-gray-600"
@@ -307,8 +335,10 @@ const TitleDescriptionComponent = ({
   // Otherwise, show editing or display mode
   const {
     title,
+    title_bn,
     altTitle,
     description,
+    description_bn,
     altDescription,
     linkType,
     link,
@@ -394,17 +424,61 @@ const TitleDescriptionComponent = ({
 
         {isEditing ? (
           <div className="space-y-4">
+            <div
+              style={{
+                display: "flex",
+                borderRadius: 8,
+                overflow: "hidden",
+                border: "1px solid var(--theme-dark)",
+              }}
+            >
+              {[
+                { key: "en", label: "EN" },
+                { key: "bn", label: "BN" },
+              ].map(({ key, label }) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setLangTab(key)}
+                  style={{
+                    flex: 1,
+                    height: 38,
+                    border: "none",
+                    background: langTab === key ? "var(--theme)" : "#f9fafb",
+                    color: langTab === key ? "#000" : "#6b7280",
+                    fontWeight: langTab === key ? 700 : 500,
+                    fontSize: "0.85rem",
+                    cursor: "pointer",
+                    transition: "all 0.15s",
+                  }}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+
             <Collapse defaultActiveKey={["1", "2", "3"]} ghost>
               <Panel header="Title Settings" key="1">
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Title *
+                      Title ({langTab}) {langTab === "en" && "*"}
                     </label>
                     <Input
-                      value={formData.title}
-                      onChange={(e) => handleChange("title", e.target.value)}
-                      placeholder="Enter title"
+                      value={
+                        langTab === "bn" ? formData.title_bn : formData.title
+                      }
+                      onChange={(e) =>
+                        handleChange(
+                          langTab === "bn" ? "title_bn" : "title",
+                          e.target.value
+                        )
+                      }
+                      placeholder={
+                        langTab === "bn"
+                          ? "বাংলায় শিরোনাম লিখুন"
+                          : "Enter title in English"
+                      }
                       className="w-full"
                     />
                   </div>
@@ -522,11 +596,21 @@ const TitleDescriptionComponent = ({
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Description *
+                      Description ({langTab}) {langTab === "en" && "*"}
                     </label>
                     <RichTextEditor
-                      defaultValue={formData.description}
-                      onChange={(html) => handleChange("description", html)}
+                      key={`desc-${langTab}`}
+                      defaultValue={
+                        langTab === "bn"
+                          ? formData.description_bn
+                          : formData.description
+                      }
+                      onChange={(html) =>
+                        handleChange(
+                          langTab === "bn" ? "description_bn" : "description",
+                          html
+                        )
+                      }
                       editMode={true}
                       maxLength={5000}
                     />
@@ -643,12 +727,29 @@ const TitleDescriptionComponent = ({
                 </span>
               )}
             </div>
+            {title_bn && (
+              <div
+                className={`${getFontSizeClass(formData.titleFontSize)} text-gray-700`}
+                style={{
+                  fontWeight: formData.titleFontWeight,
+                  textAlign: formData.titleAlign,
+                }}
+              >
+                {title_bn}
+              </div>
+            )}
             <div
               className="prose max-w-none"
               dangerouslySetInnerHTML={{
                 __html: description || "No Description",
               }}
             />
+            {description_bn && (
+              <div
+                className="prose max-w-none text-gray-600"
+                dangerouslySetInnerHTML={{ __html: description_bn }}
+              />
+            )}
             {altDescription && (
               <div
                 className="prose max-w-none italic text-gray-600"

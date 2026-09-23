@@ -1,17 +1,18 @@
 // components/PageBuilder/Components/InfoBoxComponent/InfoBoxComponent.jsx
 
-import React, { useState } from "react";
-import { Button, Space, Form, message, Popconfirm, Collapse } from "antd";
+import React, { useState, useEffect } from "react";
+import { Button, Space, Form, message, Popconfirm, Collapse, Drawer } from "antd";
 import {
   PlusOutlined,
-  MinusOutlined,
   EditOutlined,
   DeleteOutlined,
   SettingOutlined,
   CopyFilled,
+  LinkOutlined,
 } from "@ant-design/icons";
 import Image from "next/image";
 import MediaSelectionModal from "../../Modals/MediaSelectionModal";
+import instance from "../../../../axios";
 import ConfigSection from "./ConfigSection";
 import MainContentSection from "./MainContentSection";
 import AddInfoItemForm from "./AddInfoItemForm";
@@ -21,30 +22,57 @@ const { Panel } = Collapse;
 const emptyItemFields = () => ({
   title: "",
   description: "",
+  title_bn: "",
+  description_bn: "",
   secondTitle: "",
   secondDescription: "",
+  secondTitle_bn: "",
+  secondDescription_bn: "",
   altTitle: "",
   altDescription: "",
+  altTitle_bn: "",
+  altDescription_bn: "",
+  linkType: "independent",
+  link: "",
+  linkPageId: null,
+  target: "_self",
+  isExternal: false,
 });
 
 const normalizeInfoBox = (mave = {}) => ({
   title: mave.title || "",
   description: mave.description || "",
+  title_bn: mave.title_bn || "",
+  description_bn: mave.description_bn || "",
   secondTitle: mave.secondTitle || "",
   secondDescription: mave.secondDescription || "",
+  secondTitle_bn: mave.secondTitle_bn || "",
+  secondDescription_bn: mave.secondDescription_bn || "",
   altTitle: mave.altTitle || "",
   altDescription: mave.altDescription || "",
+  altTitle_bn: mave.altTitle_bn || "",
+  altDescription_bn: mave.altDescription_bn || "",
   media: Array.isArray(mave.media) ? mave.media : [],
   infoItems: Array.isArray(mave.infoItems)
     ? mave.infoItems.map((item) => ({
         id: item.id || Date.now() + Math.random(),
         title: item.title || "",
         description: item.description || "",
+        title_bn: item.title_bn || "",
+        description_bn: item.description_bn || "",
         secondTitle: item.secondTitle || "",
         secondDescription: item.secondDescription || "",
+        secondTitle_bn: item.secondTitle_bn || "",
+        secondDescription_bn: item.secondDescription_bn || "",
         altTitle: item.altTitle || "",
         altDescription: item.altDescription || "",
+        altTitle_bn: item.altTitle_bn || "",
+        altDescription_bn: item.altDescription_bn || "",
+        linkType: item.linkType || "independent",
         link: item.link || "",
+        linkPageId: item.linkPageId || null,
+        target: item.target || "_self",
+        isExternal: item.isExternal || false,
         media: Array.isArray(item.media) ? item.media : [],
       }))
     : [],
@@ -75,12 +103,26 @@ const InfoBoxComponent = ({
   const [mediaSelectionMode, setMediaSelectionMode] = useState("multiple");
   const [mediaTarget, setMediaTarget] = useState("main");
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [pages, setPages] = useState([]);
 
   const [form] = Form.useForm();
   const [editForm] = Form.useForm();
 
   const infoItems = Array.isArray(infoBox.infoItems) ? infoBox.infoItems : [];
   const mediaList = Array.isArray(infoBox.media) ? infoBox.media : [];
+
+  // Fetch pages once, used by each item's optional "Link to page" setting
+  useEffect(() => {
+    const fetchPages = async () => {
+      try {
+        const { data } = await instance.get("/pages");
+        setPages(data);
+      } catch (error) {
+        console.error("Error fetching pages:", error);
+      }
+    };
+    fetchPages();
+  }, []);
 
   const persist = (nextInfoBox, nextLayout = layout) => {
     updateComponent({
@@ -131,13 +173,35 @@ const InfoBoxComponent = ({
     id,
     title: values.title || "",
     description: values.description || "",
+    title_bn: values.title_bn || "",
+    description_bn: values.description_bn || "",
     secondTitle: values.secondTitle || "",
     secondDescription: values.secondDescription || "",
+    secondTitle_bn: values.secondTitle_bn || "",
+    secondDescription_bn: values.secondDescription_bn || "",
     altTitle: values.altTitle || "",
     altDescription: values.altDescription || "",
-    link: values.link || "",
+    altTitle_bn: values.altTitle_bn || "",
+    altDescription_bn: values.altDescription_bn || "",
+    linkType: values.linkType || "independent",
+    link: resolveLink(values),
+    linkPageId: values.linkPageId || null,
+    target: values.target || "_self",
+    isExternal: values.isExternal || false,
     media: Array.isArray(selectedMedia) ? selectedMedia : [],
   });
+
+  // Resolve the final stored link — build it from the selected page when
+  // linkType is "page", otherwise use the typed URL as-is (same approach
+  // as TitleDescriptionComponent).
+  const resolveLink = (values) => {
+    if (values.linkType === "page") {
+      const selectedPage = pages.find((p) => p.id === values.linkPageId);
+      if (!selectedPage) return "";
+      return `/${selectedPage.slug}?page_id=${selectedPage.id}&pageName=${selectedPage.page_name_en}`;
+    }
+    return values.link || "";
+  };
 
   const handleAddSubmit = (values) => {
     const newInfoItem = buildItemFromValues(values, Date.now());
@@ -148,11 +212,9 @@ const InfoBoxComponent = ({
     setInfoBox(next);
     persist(next);
     form.resetFields();
-    form.setFieldsValue(emptyItemFields());
     setSelectedMedia([]);
-    setFormKey((k) => k + 1);
-    setShowAddForm(true);
-    message.success(`Info item #${next.infoItems.length} added. Add another below.`);
+    setShowAddForm(false);
+    message.success(`Info item #${next.infoItems.length} added.`);
   };
 
   const handleEditInfoItem = (item) => {
@@ -161,11 +223,21 @@ const InfoBoxComponent = ({
     editForm.setFieldsValue({
       title: item.title,
       description: item.description,
+      title_bn: item.title_bn,
+      description_bn: item.description_bn,
       secondTitle: item.secondTitle,
       secondDescription: item.secondDescription,
+      secondTitle_bn: item.secondTitle_bn,
+      secondDescription_bn: item.secondDescription_bn,
       altTitle: item.altTitle,
       altDescription: item.altDescription,
+      altTitle_bn: item.altTitle_bn,
+      altDescription_bn: item.altDescription_bn,
+      linkType: item.linkType || "independent",
       link: item.link,
+      linkPageId: item.linkPageId,
+      target: item.target || "_self",
+      isExternal: item.isExternal || false,
     });
     setSelectedMedia(Array.isArray(item.media) ? item.media : []);
     setFormKey((k) => k + 1);
@@ -288,14 +360,50 @@ const InfoBoxComponent = ({
         <div className="col-span-9 space-y-1">
           {item.title && <h3 className="text-lg font-semibold m-0">{item.title}</h3>}
           {renderHtml(item.description)}
+          {item.title_bn && (
+            <h3 className="text-lg font-semibold m-0 text-gray-700">
+              {item.title_bn}
+            </h3>
+          )}
+          {item.description_bn && (
+            <div className="text-gray-500 pt-1 mt-1 border-t border-gray-100">
+              {renderHtml(item.description_bn)}
+            </div>
+          )}
           {item.secondTitle && (
             <h4 className="text-base font-semibold m-0">{item.secondTitle}</h4>
           )}
           {renderHtml(item.secondDescription)}
+          {item.secondTitle_bn && (
+            <h4 className="text-base font-semibold m-0 text-gray-700">
+              {item.secondTitle_bn}
+            </h4>
+          )}
+          {renderHtml(item.secondDescription_bn)}
           {item.altTitle && (
             <h4 className="text-sm font-semibold m-0">{item.altTitle}</h4>
           )}
           {renderHtml(item.altDescription)}
+          {item.altTitle_bn && (
+            <h4 className="text-sm font-semibold m-0 text-gray-700">
+              {item.altTitle_bn}
+            </h4>
+          )}
+          {renderHtml(item.altDescription_bn)}
+          {item.link && (
+            <div className="flex items-center gap-2 text-yellow-600 pt-1">
+              <LinkOutlined />
+              <a
+                href={item.link}
+                target={item.target || "_self"}
+                rel={item.isExternal ? "noopener noreferrer" : ""}
+                className="hover:underline"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {item.link}
+              </a>
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -386,95 +494,45 @@ const InfoBoxComponent = ({
 
           {/* Multiple info items */}
           <div className="border border-gray-200 rounded-md bg-white p-4">
-            <div className="flex justify-between items-center mb-4 flex-wrap gap-2">
-              <div>
-                <h4 className="text-lg font-semibold m-0">Info Item</h4>
-                <p className="text-xs text-gray-500 m-0">
-                  Same fields as main — add as many items as you need
-                </p>
-              </div>
-              <Button
-                className="mavebutton"
-                icon={showAddForm ? <MinusOutlined /> : <PlusOutlined />}
-                onClick={() => (showAddForm ? setShowAddForm(false) : openAddForm())}
-              >
-                {showAddForm ? "Close" : "Add Item"}
-              </Button>
+            <div className="mb-4">
+              <h4 className="text-lg font-semibold m-0">Info Item</h4>
+              <p className="text-xs text-gray-500 m-0">
+                Same fields as main — add as many items as you need
+              </p>
             </div>
 
             {/* Saved items list */}
             {infoItems.length > 0 && (
               <div className="mb-4">
-                {editingItemId ? null : (
-                  <Collapse accordion>
-                    {infoItems.map((item, index) => (
-                      <Panel
-                        header={`#${index + 1} — ${item.title || "Untitled"}`}
-                        key={item.id}
-                        extra={
-                          <Space
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <Button
-                              size="small"
-                              icon={<EditOutlined />}
-                              onClick={() => handleEditInfoItem(item)}
-                            />
-                            <Button
-                              size="small"
-                              danger
-                              icon={<DeleteOutlined />}
-                              onClick={() => handleDeleteInfoItem(item.id)}
-                            />
-                          </Space>
-                        }
-                      >
-                        {renderItemPreview(item, index)}
-                      </Panel>
-                    ))}
-                  </Collapse>
-                )}
+                <Collapse accordion>
+                  {infoItems.map((item, index) => (
+                    <Panel
+                      header={`#${index + 1} — ${item.title || "Untitled"}`}
+                      key={item.id}
+                      extra={
+                        <Space onClick={(e) => e.stopPropagation()}>
+                          <Button
+                            size="small"
+                            icon={<EditOutlined />}
+                            onClick={() => handleEditInfoItem(item)}
+                          />
+                          <Button
+                            size="small"
+                            danger
+                            icon={<DeleteOutlined />}
+                            onClick={() => handleDeleteInfoItem(item.id)}
+                          />
+                        </Space>
+                      }
+                    >
+                      {renderItemPreview(item, index)}
+                    </Panel>
+                  ))}
+                </Collapse>
               </div>
             )}
 
-            {/* Edit existing item */}
-            {editingItemId && (
-              <div className="mb-4">
-                <h5 className="font-medium mb-2">Edit Info Item</h5>
-                <AddInfoItemForm
-                  key={`edit-${editingItemId}-${formKey}`}
-                  form={editForm}
-                  onFinish={handleEditSubmit}
-                  onMediaSelect={() => openMediaModal("multiple", "editItem")}
-                  selectedMedia={selectedMedia}
-                  submitLabel="Update Item"
-                  editorKey={`edit-${editingItemId}-${formKey}`}
-                />
-                <Button className="mt-2" onClick={handleCancelItemEdit}>
-                  Cancel edit
-                </Button>
-              </div>
-            )}
-
-            {/* Add new item form */}
-            {showAddForm && !editingItemId && (
-              <div>
-                <h5 className="font-medium mb-2">
-                  New Info Item #{infoItems.length + 1}
-                </h5>
-                <AddInfoItemForm
-                  key={`add-${formKey}`}
-                  form={form}
-                  onFinish={handleAddSubmit}
-                  onMediaSelect={() => openMediaModal("multiple", "item")}
-                  selectedMedia={selectedMedia}
-                  submitLabel="Submit"
-                  editorKey={`add-${formKey}`}
-                />
-              </div>
-            )}
-
-            {infoItems.length === 0 && !showAddForm && (
+            {infoItems.length === 0 && (
               <div className="text-center py-8 border border-dashed border-gray-300 rounded-lg">
                 <p className="text-gray-500 mb-3">No info items yet</p>
                 <Button className="mavebutton" icon={<PlusOutlined />} onClick={openAddForm}>
@@ -483,7 +541,7 @@ const InfoBoxComponent = ({
               </div>
             )}
 
-            {infoItems.length > 0 && !showAddForm && !editingItemId && (
+            {infoItems.length > 0 && (
               <div className="mt-3 text-center">
                 <Button className="mavebutton" icon={<PlusOutlined />} onClick={openAddForm}>
                   Add another item
@@ -494,20 +552,74 @@ const InfoBoxComponent = ({
         </Space>
       )}
 
+      <Drawer
+        title={`New Info Item #${infoItems.length + 1}`}
+        placement="right"
+        width={520}
+        open={showAddForm}
+        destroyOnClose
+        onClose={() => setShowAddForm(false)}
+      >
+        <AddInfoItemForm
+          key={`add-${formKey}`}
+          form={form}
+          onFinish={handleAddSubmit}
+          onMediaSelect={() => openMediaModal("multiple", "item")}
+          selectedMedia={selectedMedia}
+          submitLabel="Add"
+          editorKey={`add-${formKey}`}
+          pages={pages}
+        />
+      </Drawer>
+
+      <Drawer
+        title="Edit Info Item"
+        placement="right"
+        width={520}
+        open={Boolean(editingItemId)}
+        destroyOnClose
+        onClose={handleCancelItemEdit}
+      >
+        {editingItemId && (
+          <AddInfoItemForm
+            key={`edit-${editingItemId}-${formKey}`}
+            form={editForm}
+            onFinish={handleEditSubmit}
+            onMediaSelect={() => openMediaModal("multiple", "editItem")}
+            selectedMedia={selectedMedia}
+            submitLabel="Update"
+            editorKey={`edit-${editingItemId}-${formKey}`}
+            pages={pages}
+          />
+        )}
+      </Drawer>
+
       {(preview || !isEditMode) && (
         <div style={containerStyle}>
           {infoBox.title && (
             <h2 className="text-2xl font-bold mb-2">{infoBox.title}</h2>
           )}
           {renderHtml(infoBox.description)}
+          {infoBox.title_bn && (
+            <h2 className="text-2xl font-bold mb-2 mt-2">{infoBox.title_bn}</h2>
+          )}
+          {renderHtml(infoBox.description_bn)}
           {infoBox.secondTitle && (
             <h3 className="text-xl font-semibold mb-2 mt-4">{infoBox.secondTitle}</h3>
           )}
           {renderHtml(infoBox.secondDescription)}
+          {infoBox.secondTitle_bn && (
+            <h3 className="text-xl font-semibold mb-2 mt-2">{infoBox.secondTitle_bn}</h3>
+          )}
+          {renderHtml(infoBox.secondDescription_bn)}
           {infoBox.altTitle && (
             <h3 className="text-lg font-semibold mb-2 mt-4">{infoBox.altTitle}</h3>
           )}
           {renderHtml(infoBox.altDescription)}
+          {infoBox.altTitle_bn && (
+            <h3 className="text-lg font-semibold mb-2 mt-2">{infoBox.altTitle_bn}</h3>
+          )}
+          {renderHtml(infoBox.altDescription_bn)}
 
           {mediaList.length > 0 && (
             <div className="flex flex-wrap gap-2 my-4">
