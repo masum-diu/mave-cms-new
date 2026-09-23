@@ -22,7 +22,7 @@ import Godfather  from "../../src/data/godfather.json";
 import Changelog  from "../../pages/usermanual/changelog.json";
 import Image from "next/image";
 import Link from "next/link";
-import instance from "../../axios";
+import instance, { getLocalTenantSlug } from "../../axios";
 import { useMenuRefresh } from "../../src/context/MenuRefreshContext";
 
 /* ── Section groupings ─────────────────────── */
@@ -285,10 +285,15 @@ const SideMenuItems = ({ token, user, handleLogout, setIsModalOpen, collapsed })
     user?.role ||
     ""
   ).toLowerCase();
-  const isAdmin =
-    roleName === "admin" ||
-    user?.is_admin === true ||
-    String(user?.role_id) === "1";
+  // A tenant's own local admin also has role_id 1 inside that tenant's DB,
+  // so role alone can't distinguish them from the platform Super Admin.
+  // Only a master-session login (no org/tenant slug) counts as Super Admin.
+  const isMasterSession = !getLocalTenantSlug();
+  const isSuperAdmin =
+    isMasterSession &&
+    (roleName === "super admin" ||
+      roleName === "superadmin" ||
+      String(user?.role_id) === "1");
 
   const finalMenuData = useMemo(() => {
     const data = JSON.parse(JSON.stringify(allMenuData));
@@ -308,16 +313,16 @@ const SideMenuItems = ({ token, user, handleLogout, setIsModalOpen, collapsed })
         ];
       }
     }
-    // Hide Tenants menu from non-admin users
+    // Hide Tenants menu from non-super-admin users
     data.forEach(item => {
       if (item.submenu) {
         item.submenu = item.submenu.filter(
-          sub => sub.link !== "/tenants" || isAdmin
+          sub => sub.link !== "/tenants" || isSuperAdmin
         );
       }
     });
     return data;
-  }, [allMenuData, customModels, token, user, isAdmin]);
+  }, [allMenuData, customModels, token, user, isSuperAdmin]);
 
   const navigate = (item) => item.link && router.push(item.link);
 

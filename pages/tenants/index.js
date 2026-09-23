@@ -4,6 +4,7 @@ import { HomeOutlined, PlusOutlined } from "@ant-design/icons";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { useAuth } from "../../src/context/AuthContext";
+import { getLocalTenantSlug } from "../../axios";
 import TenantTable from "../../components/tenants/TenantTable";
 import CreateTenant from "../../components/tenants/CreateTenant";
 
@@ -21,11 +22,16 @@ export default function Tenants() {
       user?.role ||
       ""
     ).toLowerCase();
-    const isAdmin =
-      roleName === "admin" ||
-      user?.is_admin === true ||
-      String(user?.role_id) === "1";
-    if (user && !isAdmin) {
+    // A tenant's own local admin also has role_id 1 inside that tenant's DB,
+    // so role alone can't distinguish them from the platform Super Admin.
+    // Only a master-session login (no org/tenant slug) counts as Super Admin.
+    const isMasterSession = !getLocalTenantSlug();
+    const isSuperAdmin =
+      isMasterSession &&
+      (roleName === "super admin" ||
+        roleName === "superadmin" ||
+        String(user?.role_id) === "1");
+    if (user && !isSuperAdmin) {
       router.replace("/");
     }
   }, [user, router]);
