@@ -64,9 +64,11 @@ const TitleDescriptionComponent = ({
     title: "",
     title_bn: "",
     altTitle: "",
+    altTitle_bn: "",
     description: "",
     description_bn: "",
     altDescription: "",
+    altDescription_bn: "",
     linkType: "independent",
     link: "",
     linkPageId: null,
@@ -102,9 +104,11 @@ const TitleDescriptionComponent = ({
         title = "",
         title_bn = "",
         altTitle = "",
+        altTitle_bn = "",
         description = "",
         description_bn = "",
         altDescription = "",
+        altDescription_bn = "",
         linkType = "independent",
         link = "",
         linkPageId = null,
@@ -121,9 +125,11 @@ const TitleDescriptionComponent = ({
         title,
         title_bn,
         altTitle,
+        altTitle_bn,
         description,
         description_bn,
         altDescription,
+        altDescription_bn,
         linkType,
         link,
         linkPageId,
@@ -158,9 +164,11 @@ const TitleDescriptionComponent = ({
         title: orig.title || "",
         title_bn: orig.title_bn || "",
         altTitle: orig.altTitle || "",
+        altTitle_bn: orig.altTitle_bn || "",
         description: orig.description || "",
         description_bn: orig.description_bn || "",
         altDescription: orig.altDescription || "",
+        altDescription_bn: orig.altDescription_bn || "",
         linkType: orig.linkType || "independent",
         link: orig.link || "",
         linkPageId: orig.linkPageId || null,
@@ -253,9 +261,11 @@ const TitleDescriptionComponent = ({
       title,
       title_bn,
       altTitle,
+      altTitle_bn,
       description,
       description_bn,
       altDescription,
+      altDescription_bn,
       link,
       isExternal,
       target,
@@ -282,6 +292,17 @@ const TitleDescriptionComponent = ({
                 className="ml-2"
               >
                 / {altTitle}
+              </span>
+            )}
+            {formData.isDualColor && altTitle_bn && (
+              <span
+                style={{
+                  color: formData.altTitleColor,
+                  fontWeight: formData.titleFontWeight,
+                }}
+                className="ml-2"
+              >
+                / {altTitle_bn}
               </span>
             )}
           </div>
@@ -314,6 +335,12 @@ const TitleDescriptionComponent = ({
               dangerouslySetInnerHTML={{ __html: altDescription }}
             />
           )}
+          {altDescription_bn && (
+            <div
+              className="prose max-w-none italic text-gray-500"
+              dangerouslySetInnerHTML={{ __html: altDescription_bn }}
+            />
+          )}
           {link && (
             <div className="flex items-center gap-2 text-yellow-600">
               <LinkOutlined />
@@ -337,9 +364,11 @@ const TitleDescriptionComponent = ({
     title,
     title_bn,
     altTitle,
+    altTitle_bn,
     description,
     description_bn,
     altDescription,
+    altDescription_bn,
     linkType,
     link,
     linkPageId,
@@ -496,14 +525,25 @@ const TitleDescriptionComponent = ({
                   {formData.isDualColor && (
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Alternative Title
+                        Alternative Title ({langTab})
                       </label>
                       <Input
-                        value={formData.altTitle}
-                        onChange={(e) =>
-                          handleChange("altTitle", e.target.value)
+                        value={
+                          langTab === "bn"
+                            ? formData.altTitle_bn
+                            : formData.altTitle
                         }
-                        placeholder="Enter alternative title"
+                        onChange={(e) =>
+                          handleChange(
+                            langTab === "bn" ? "altTitle_bn" : "altTitle",
+                            e.target.value
+                          )
+                        }
+                        placeholder={
+                          langTab === "bn"
+                            ? "বাংলায় বিকল্প শিরোনাম লিখুন"
+                            : "Enter alternative title in English"
+                        }
                         className="w-full"
                       />
                     </div>
@@ -617,11 +657,23 @@ const TitleDescriptionComponent = ({
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Alternative Description
+                      Alternative Description ({langTab})
                     </label>
                     <RichTextEditor
-                      defaultValue={formData.altDescription}
-                      onChange={(html) => handleChange("altDescription", html)}
+                      key={`alt-desc-${langTab}`}
+                      defaultValue={
+                        langTab === "bn"
+                          ? formData.altDescription_bn
+                          : formData.altDescription
+                      }
+                      onChange={(html) =>
+                        handleChange(
+                          langTab === "bn"
+                            ? "altDescription_bn"
+                            : "altDescription",
+                          html
+                        )
+                      }
                       editMode={true}
                       maxLength={5000}
                     />
@@ -726,6 +778,17 @@ const TitleDescriptionComponent = ({
                   / {altTitle}
                 </span>
               )}
+              {formData.isDualColor && altTitle_bn && (
+                <span
+                  style={{
+                    color: formData.altTitleColor,
+                    fontWeight: formData.titleFontWeight,
+                  }}
+                  className="ml-2"
+                >
+                  / {altTitle_bn}
+                </span>
+              )}
             </div>
             {title_bn && (
               <div
@@ -754,6 +817,12 @@ const TitleDescriptionComponent = ({
               <div
                 className="prose max-w-none italic text-gray-600"
                 dangerouslySetInnerHTML={{ __html: altDescription }}
+              />
+            )}
+            {altDescription_bn && (
+              <div
+                className="prose max-w-none italic text-gray-500"
+                dangerouslySetInnerHTML={{ __html: altDescription_bn }}
               />
             )}
             {link && (
