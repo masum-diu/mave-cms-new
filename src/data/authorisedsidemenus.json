@@ -12,22 +12,10 @@
                 "title": "Media Library"
             },
             {
-                "id": 4,
-                "icon": "/icons/mave/menuitems.svg",
-                "link": "/menuitems",
-                "title": "Menu Items"
-            },
-            {
-                "id": 6,
-                "icon": "/icons/mave/menus.svg",
-                "link": "/menus",
-                "title": "Menus"
-            },
-            {
                 "id": 7,
                 "icon": "/icons/mave/navbar.svg",
-                "link": "/navbars",
-                "title": "Navbars"
+                "link": "/navigation",
+                "title": "Navigation"
             },
             {
                 "id": 8,

@@ -82,6 +82,9 @@ const MediaSelectionModal = (props) => {
     handlePageChange,
   } = useMediaData(isVisible);
 
+  // Seed the selection only when the drawer opens. Callers often pass a new
+  // array every render (or rely on the [] default), so depending on
+  // initialSelectedMedia here wiped the user's click on the next render.
   useEffect(() => {
     if (isVisible) {
       const initial = Array.isArray(initialSelectedMedia)
@@ -92,7 +95,7 @@ const MediaSelectionModal = (props) => {
       setStableSelectedMedia(initial);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isVisible, initialSelectedMedia]);
+  }, [isVisible]);
 
   // Debug: Track selectedMedia changes
   // useEffect(() => {

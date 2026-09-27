@@ -41,7 +41,7 @@ const NavbarRow = ({
     navbar.title_bn
   );
   const [editedLogoId, setEditedLogoId] = useState(navbar?.logo?.id || null);
-  const [editedMenuId, setEditedMenuId] = useState(navbar.menu.id || null);
+  const [editedMenuId, setEditedMenuId] = useState(navbar?.menu?.id || null);
   const [mediaModalVisible, setMediaModalVisible] = useState(false);
   const [selectedLogoMedia, setSelectedLogoMedia] = useState(null); // New state
 
@@ -210,7 +210,7 @@ const NavbarRow = ({
             onChange={(value) => setEditedMenuId(value)}
             className="w-60"
             allowClear
-            defaultValue={navbar.menu.id}
+            defaultValue={navbar?.menu?.id}
           >
             {menus?.map((menu) => (
               <Select.Option key={menu.id} value={menu.id}>
@@ -225,8 +225,8 @@ const NavbarRow = ({
             className="w-full"
             expandIconPosition="right"
           >
-            <Collapse.Panel header={navbar.menu.name} key="1" className="w-56">
-              {navbar.menu.menu_items?.map((item) => (
+            <Collapse.Panel header={navbar?.menu?.name || "No menu assigned"} key="1" className="w-56">
+              {navbar?.menu?.menu_items?.map((item) => (
                 <p key={item.id}>{item.title}</p>
               ))}
             </Collapse.Panel>

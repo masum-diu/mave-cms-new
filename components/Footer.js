@@ -357,16 +357,8 @@ const Footer = () => {
                       onClick: () => router.push("/gallery"),
                     },
                     {
-                      title: "Menus Items",
-                      onClick: () => router.push("/menuitems"),
-                    },
-                    {
-                      title: "Menus",
-                      onClick: () => router.push("/menus"),
-                    },
-                    {
-                      title: "Navbars",
-                      onClick: () => router.push("/navbars"),
+                      title: "Navigation",
+                      onClick: () => router.push("/navigation"),
                     },
                     {
                       title: "Sliders",
