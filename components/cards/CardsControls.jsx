@@ -42,10 +42,21 @@ const CardsControls = ({
           onChange={(value) => setSelectedPageFilter(value)}
           className="w-48 md:w-72"
           showSearch
+          optionFilterProp="label"
+          filterOption={(input, option) =>
+            String(option?.label ?? option?.children ?? "")
+              .toLowerCase()
+              .includes(input.toLowerCase())
+          }
+          notFoundContent={(pages?.length ? "No match" : "No pages found")}
         >
-          {pages?.map((page) => (
-            <Select.Option key={page.slug} value={page.page_name}>
-              {page.page_name_en}
+          {(Array.isArray(pages) ? pages : []).map((page) => (
+            <Select.Option
+              key={page.id || page.slug}
+              value={page.page_name_en || page.page_name || page.slug}
+              label={page.page_name_en || page.page_name || page.slug}
+            >
+              {page.page_name_en || page.page_name || page.slug}
             </Select.Option>
           ))}
         </Select>

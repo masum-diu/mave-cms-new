@@ -540,11 +540,27 @@ const CardDrawer = ({ open, onClose, selectedCard, pages, media, uniqueTags, onS
                 <SettingOutlined /> Advanced Settings
                 <span style={{marginLeft:"auto",fontSize:"0.7rem"}}>{showAdvanced?"▲":"▼"}</span>
               </button>
-              {showAdvanced&&(
-                <div style={{padding:"16px 16px 4px"}}>
+              <div style={{padding:"16px 16px 4px", display: showAdvanced ? "block" : "none"}}>
                   <Form.Item label={<span style={{fontWeight:600,fontSize:"0.82rem"}}>Page Association</span>} name="page_name" style={{marginBottom:14}}>
-                    <Select placeholder="Select page" allowClear showSearch>
-                      {pages?.filter(p=>p.page_name_en).map(p=><Option key={p.id} value={p.page_name_en}>{p.page_name_en}</Option>)}
+                    <Select
+                      placeholder="Search or select page"
+                      allowClear
+                      showSearch
+                      optionFilterProp="label"
+                      filterOption={(input, option) =>
+                        String(option?.label ?? option?.children ?? "")
+                          .toLowerCase()
+                          .includes(input.toLowerCase())
+                      }
+                      notFoundContent={(pages?.length ? "No match" : "No pages found")}
+                    >
+                      {(Array.isArray(pages) ? pages : [])
+                        .filter((p) => p?.page_name_en)
+                        .map((p) => (
+                          <Option key={p.id} value={p.page_name_en} label={p.page_name_en}>
+                            {p.page_name_en}
+                          </Option>
+                        ))}
                     </Select>
                   </Form.Item>
                   <Form.Item label={<span style={{fontWeight:600,fontSize:"0.82rem"}}>Link Type</span>} name="link_type" style={{marginBottom:10}}>
@@ -556,10 +572,29 @@ const CardDrawer = ({ open, onClose, selectedCard, pages, media, uniqueTags, onS
                       ))}
                     </Radio.Group>
                   </Form.Item>
-                  {linkType==="page"&&<Form.Item name="link_page_id" label={<span style={{fontSize:"0.82rem"}}>Link to page</span>} style={{marginBottom:14}}><Select placeholder="Select a page" allowClear showSearch>{pages?.map(p=><Option key={p.id} value={p.id}>{p.page_name_en}</Option>)}</Select></Form.Item>}
-                  {linkType==="independent"&&<Form.Item name="link_url" label={<span style={{fontSize:"0.82rem"}}>URL</span>} style={{marginBottom:14}}><Input placeholder="https://example.com or /about" style={{borderRadius:8}}/></Form.Item>}
-                  {linkType==="media"&&<Form.Item name="media_link_path" label={<span style={{fontSize:"0.82rem"}}>Media path</span>} style={{marginBottom:14}}><Input addonBefore={process.env.NEXT_PUBLIC_MEDIA_URL} placeholder="media/file.pdf" style={{borderRadius:8}}/></Form.Item>}
-                  {linkType==="internal"&&<Form.Item name="internal_link_path" label={<span style={{fontSize:"0.82rem"}}>Internal path</span>} style={{marginBottom:14}}><Input addonBefore={process.env.NEXT_PUBLIC_APP_URL} placeholder="/about-us" style={{borderRadius:8}}/></Form.Item>}
+                  <Form.Item name="link_page_id" label={<span style={{fontSize:"0.82rem"}}>Link to page</span>} style={{marginBottom:14,display:linkType==="page"?"block":"none"}}>
+                    <Select
+                      placeholder="Search or select a page"
+                      allowClear
+                      showSearch
+                      optionFilterProp="label"
+                      filterOption={(input, option) =>
+                        String(option?.label ?? option?.children ?? "")
+                          .toLowerCase()
+                          .includes(input.toLowerCase())
+                      }
+                      notFoundContent={(pages?.length ? "No match" : "No pages found")}
+                    >
+                      {(Array.isArray(pages) ? pages : []).map((p) => (
+                        <Option key={p.id} value={p.id} label={p.page_name_en || p.slug || String(p.id)}>
+                          {p.page_name_en || p.slug || `Page #${p.id}`}
+                        </Option>
+                      ))}
+                    </Select>
+                  </Form.Item>
+                  <Form.Item name="link_url" label={<span style={{fontSize:"0.82rem"}}>URL</span>} style={{marginBottom:14,display:linkType==="independent"?"block":"none"}}><Input placeholder="https://example.com or /about" style={{borderRadius:8}}/></Form.Item>
+                  <Form.Item name="media_link_path" label={<span style={{fontSize:"0.82rem"}}>Media path</span>} style={{marginBottom:14,display:linkType==="media"?"block":"none"}}><Input addonBefore={process.env.NEXT_PUBLIC_MEDIA_URL} placeholder="media/file.pdf" style={{borderRadius:8}}/></Form.Item>
+                  <Form.Item name="internal_link_path" label={<span style={{fontSize:"0.82rem"}}>Internal path</span>} style={{marginBottom:14,display:linkType==="internal"?"block":"none"}}><Input addonBefore={process.env.NEXT_PUBLIC_APP_URL} placeholder="/about-us" style={{borderRadius:8}}/></Form.Item>
                   <Form.Item label={<span style={{fontWeight:600,fontSize:"0.82rem"}}>Tags</span>} name="tags" style={{marginBottom:14}}>
                     <Select mode="tags" placeholder="Add or select tags" showSearch style={{width:"100%"}}>
                       {uniqueTags?.map(t=><Option key={t} value={t}>{t}</Option>)}
@@ -569,7 +604,6 @@ const CardDrawer = ({ open, onClose, selectedCard, pages, media, uniqueTags, onS
                     <Switch checkedChildren="Active" unCheckedChildren="Draft" style={{background:"#22c55e"}}/>
                   </Form.Item>
                 </div>
-              )}
             </div>
           </Form>
         )}

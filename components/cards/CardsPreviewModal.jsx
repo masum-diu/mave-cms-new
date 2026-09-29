@@ -565,10 +565,25 @@ const CardsPreviewModal = ({
         {showAdvanced && (
           <div style={{ padding: "16px 16px 4px" }}>
             <Form.Item label={<span style={{ fontWeight: 600, fontSize: "0.82rem" }}>Page Association</span>} name="page_name" style={{ marginBottom: 14 }}>
-              <Select placeholder="Select page" allowClear showSearch>
-                {pages?.filter(p => p.page_name_en).map(p => (
-                  <Option key={p.id} value={p.page_name_en}>{p.page_name_en}</Option>
-                ))}
+              <Select
+                placeholder="Search or select page"
+                allowClear
+                showSearch
+                optionFilterProp="label"
+                filterOption={(input, option) =>
+                  String(option?.label ?? option?.children ?? "")
+                    .toLowerCase()
+                    .includes(input.toLowerCase())
+                }
+                notFoundContent={(pages?.length ? "No match" : "No pages found")}
+              >
+                {(Array.isArray(pages) ? pages : [])
+                  .filter((p) => p?.page_name_en)
+                  .map((p) => (
+                    <Option key={p.id} value={p.page_name_en} label={p.page_name_en}>
+                      {p.page_name_en}
+                    </Option>
+                  ))}
               </Select>
             </Form.Item>
 
@@ -584,8 +599,23 @@ const CardsPreviewModal = ({
 
             {linkType === "page" && (
               <Form.Item name="link_page_id" label={<span style={{ fontSize: "0.82rem" }}>Link to page</span>} style={{ marginBottom: 14 }}>
-                <Select placeholder="Select a page" allowClear showSearch>
-                  {pages?.map(p => <Option key={p.id} value={p.id}>{p.page_name_en}</Option>)}
+                <Select
+                  placeholder="Search or select a page"
+                  allowClear
+                  showSearch
+                  optionFilterProp="label"
+                  filterOption={(input, option) =>
+                    String(option?.label ?? option?.children ?? "")
+                      .toLowerCase()
+                      .includes(input.toLowerCase())
+                  }
+                  notFoundContent={(pages?.length ? "No match" : "No pages found")}
+                >
+                  {(Array.isArray(pages) ? pages : []).map((p) => (
+                    <Option key={p.id} value={p.id} label={p.page_name_en || p.slug || String(p.id)}>
+                      {p.page_name_en || p.slug || `Page #${p.id}`}
+                    </Option>
+                  ))}
                 </Select>
               </Form.Item>
             )}

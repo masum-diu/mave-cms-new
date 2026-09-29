@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { message, Spin, Pagination } from "antd";
 import instance from "../../axios";
+import { fetchPagesList } from "../../utils/pagesApi";
+import { unwrapApiPayload } from "../../utils/normalizeApiList";
 import CardsHeader from "../../components/cards/CardsHeader";
 import CardsList from "../../components/cards/CardsList";
 import CardDrawer from "../../components/cards/CardDrawer";
@@ -27,19 +29,26 @@ const CardsPage = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [cardsRes, mediaRes, pagesRes] = await Promise.all([
-        instance.get("/cards"),
-        instance.get("/media"),
-        instance.get("/pages"),
+      const [cardsRes, mediaRes, pagesList] = await Promise.all([
+        instance.get("/cards").catch(() => null),
+        instance.get("/media").catch(() => null),
+        fetchPagesList().catch(() => []),
       ]);
-      if (cardsRes.status === 200 && mediaRes.status === 200 && pagesRes.status === 200) {
-        setCardsData(cardsRes.data);
-        setFilteredCards(cardsRes.data);
-        setMedia(mediaRes.data);
-        setPages(pagesRes.data);
+
+      if (cardsRes?.status === 200) {
+        const cards = unwrapApiPayload(cardsRes);
+        setCardsData(cards);
+        setFilteredCards(cards);
       } else {
-        message.error("Failed to fetch data.");
+        message.error("Failed to fetch cards.");
       }
+
+      if (mediaRes?.status === 200) {
+        setMedia(unwrapApiPayload(mediaRes));
+      }
+
+      // Always an array — empty tenant returns [] instead of breaking the page Select
+      setPages(Array.isArray(pagesList) ? pagesList : []);
     } catch {
       message.error("Failed to fetch data.");
     }
