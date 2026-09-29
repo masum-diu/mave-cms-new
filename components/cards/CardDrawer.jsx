@@ -8,6 +8,7 @@ import {
   EditOutlined,
 } from "@ant-design/icons";
 import MediaSelectionModal from "../PageBuilder/Modals/MediaSelectionModal";
+import { notifyCardChanged, propagateCardChangeInBackground } from "../../utils/cardSync";
 import RichTextEditor from "../RichTextEditor";
 import instance from "../../axios";
 import Image from "next/image";
@@ -308,11 +309,15 @@ const CardDrawer = ({ open, onClose, selectedCard, pages, media, uniqueTags, onS
       };
 
       if (mode === "create") {
-        await instance.post("/cards", payload);
+        const res = await instance.post("/cards", payload);
+        const newId = res?.data?.id || res?.data?.data?.id;
+        if (newId) notifyCardChanged(newId, "created");
         message.success("Card created successfully.");
       } else {
         await instance.put(`/cards/${selectedCard.id}`, payload);
         message.success("Card updated successfully.");
+        // Page sync runs in background so save UI stays fast
+        propagateCardChangeInBackground(selectedCard.id, "updated");
       }
 
       onSuccess();

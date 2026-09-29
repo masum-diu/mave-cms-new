@@ -14,11 +14,13 @@ import CardSelectionModal from "../Modals/CardSelectionModal";
 import Image from "next/image";
 import instance from "../../../axios";
 import { setIsDirty, setLastSaved } from "../../../store/slices/pageSlice";
+import { subscribeCardChanges } from "../../../utils/cardSync";
 
 const { Text } = Typography;
 
-// Configuration
-const POLLING_INTERVAL = 30000; // 30 seconds
+// Poll for changes when Page Builder stays open (fallback if broadcast missed)
+const POLLING_INTERVAL = 10000; // 10 seconds
+const MIN_REFRESH_GAP_MS = 2000;
 
 // Helper function to render card media
 const renderCardMedia = (media) => {
@@ -148,10 +150,13 @@ const CardComponent = ({
         return;
       }
 
-      // Check if we've already updated recently to prevent rapid updates
+      // Avoid stampeding the API when multiple rapid triggers fire
       const now = Date.now();
-      if (lastUpdateRef.current && now - lastUpdateRef.current < 10000) {
-        console.log("🔄 Skipping card update - too recent");
+      if (
+        silent &&
+        lastUpdateRef.current &&
+        now - lastUpdateRef.current < MIN_REFRESH_GAP_MS
+      ) {
         return;
       }
 
@@ -167,8 +172,18 @@ const CardComponent = ({
           // which would otherwise always look like a change.
           const { config: _config, ...existingCardFields } =
             component._mave || {};
+
+          const normalizeForCompare = (obj) => {
+            try {
+              return JSON.stringify(obj, Object.keys(obj || {}).sort());
+            } catch {
+              return JSON.stringify(obj);
+            }
+          };
+
           const hasChanges =
-            JSON.stringify(updatedCard) !== JSON.stringify(existingCardFields);
+            normalizeForCompare(updatedCard) !==
+            normalizeForCompare(existingCardFields);
 
           if (hasChanges) {
             const updatedComponent = {
@@ -186,7 +201,10 @@ const CardComponent = ({
 
             updateComponent(updatedComponent);
             pendingAutoSaveRef.current = true;
-            setCardData(updatedCard);
+            setCardData({
+              ...updatedCard,
+              config: cardData.config || updatedCard.config,
+            });
             setLastUpdated(new Date());
             lastUpdateRef.current = now;
 
@@ -243,6 +261,45 @@ const CardComponent = ({
 
     return () => clearInterval(intervalId);
   }, [autoPolling, cardData?.id]);
+
+  // Instant sync when Cards library saves/updates/deletes this card
+  // (same tab via CustomEvent, other tabs via localStorage)
+  useEffect(() => {
+    if (!cardData?.id) return undefined;
+
+    return subscribeCardChanges(({ cardId, action }) => {
+      if (String(cardId) !== String(cardData.id)) return;
+      if (action === "deleted") {
+        setCardMissing(true);
+        message.warning(
+          "This card was deleted from the Cards library. Please select a different card."
+        );
+        return;
+      }
+      // Force refresh even if last poll was recent
+      lastUpdateRef.current = null;
+      refreshCardDataRef.current(true);
+    });
+  }, [cardData?.id]);
+
+  // Refresh when user comes back to this tab (e.g. after editing Cards page)
+  useEffect(() => {
+    if (!cardData?.id) return undefined;
+
+    const onFocus = () => {
+      if (document.visibilityState === "visible") {
+        lastUpdateRef.current = null;
+        refreshCardDataRef.current(true);
+      }
+    };
+
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onFocus);
+    return () => {
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onFocus);
+    };
+  }, [cardData?.id]);
 
   // Handle selection from CardSelectionModal — the drawer's own "Save"
   // button (after picking a card and configuring it) IS the confirm step,

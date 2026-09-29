@@ -10,6 +10,7 @@ import {
 import MediaSelectionModal from "../PageBuilder/Modals/MediaSelectionModal";
 import RichTextEditor from "../RichTextEditor";
 import instance from "../../axios";
+import { propagateCardChangeInBackground } from "../../utils/cardSync";
 import Image from "next/image";
 
 const { Option } = Select;
@@ -239,6 +240,7 @@ const CardsPreviewModal = ({
       };
       await instance.put(`/cards/${selectedCard.id}`, payload);
       message.success("Card updated successfully.");
+      propagateCardChangeInBackground(selectedCard.id, "updated");
       setIsEditing(false);
       onCancel();
       fetchCards();

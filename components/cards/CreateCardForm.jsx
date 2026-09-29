@@ -11,6 +11,7 @@ import {
 import MediaSelectionModal from "../PageBuilder/Modals/MediaSelectionModal";
 import RichTextEditor from "../RichTextEditor";
 import instance from "../../axios";
+import { notifyCardChanged } from "../../utils/cardSync";
 import Image from "next/image";
 
 const { Option } = Select;
@@ -174,7 +175,9 @@ const CreateCardForm = ({ onSuccess, onCancel, pages, media, uniqueTags }) => {
           content_items: contentItems,
         },
       };
-      await instance.post("/cards", payload);
+      const res = await instance.post("/cards", payload);
+      const newId = res?.data?.id || res?.data?.data?.id;
+      if (newId) notifyCardChanged(newId, "created");
       message.success("Card created successfully.");
       form.resetFields();
       setSelectedMedia([]);

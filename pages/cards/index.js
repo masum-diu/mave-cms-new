@@ -6,6 +6,7 @@ import { unwrapApiPayload } from "../../utils/normalizeApiList";
 import CardsHeader from "../../components/cards/CardsHeader";
 import CardsList from "../../components/cards/CardsList";
 import CardDrawer from "../../components/cards/CardDrawer";
+import { propagateCardChangeInBackground } from "../../utils/cardSync";
 
 const CardsPage = () => {
   const [loading, setLoading]             = useState(false);
@@ -105,6 +106,7 @@ const CardsPage = () => {
     try {
       await instance.delete(`/cards/${cardId}`);
       message.success("Card deleted successfully.");
+      propagateCardChangeInBackground(cardId, "deleted");
       fetchData();
     } catch {
       message.error("Failed to delete card.");

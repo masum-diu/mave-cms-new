@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
+import { useSelector, useDispatch } from "react-redux";
 import { message, Popconfirm, Tooltip } from "antd";
 import {
   EditOutlined, DeleteOutlined, CopyOutlined, SaveOutlined,
@@ -9,6 +10,8 @@ import SliderRenderer from "./SliderRenderer";
 import { useSliderRefresh } from "./SliderRefresh";
 import SliderConfig from "./SliderConfig";
 import SliderSelectionModal from "../../Modals/SliderSelectionModal";
+import instance from "../../../../axios";
+import { setIsDirty, setLastSaved } from "../../../../store/slices/pageSlice";
 
 /* ── generic small action button ── */
 const Btn = ({ icon, label, onClick, danger, disabled, title, primary }) => (
@@ -56,6 +59,10 @@ const SliderComponent = ({
   isEditing = false,
   onDuplicateElement,
 }) => {
+  const dispatch = useDispatch();
+  const pageData = useSelector((state) => state.page.pageData);
+  const pendingAutoSaveRef = useRef(false);
+
   const [isModalVisible,    setIsModalVisible]    = useState(false);
   const [sliderData,        setSliderData]        = useState(component._mave);
   const [selectedSliderData,setSelectedSliderData]= useState(null);
@@ -67,8 +74,18 @@ const SliderComponent = ({
     height:   component._mave?.config?.height   ?? 400,
   });
 
+  // Sync from Cards/Sliders library should land in Redux and then persist
+  // (same pattern as CardComponent) — don't wait for a manual page Save.
+  const syncedUpdateComponent = useCallback(
+    (updated) => {
+      updateComponent(updated);
+      pendingAutoSaveRef.current = true;
+    },
+    [updateComponent]
+  );
+
   const { isRefreshing, pollingError, lastSynced, hasUpdate, handleManualRefresh } =
-    useSliderRefresh(sliderData, component, updateComponent, preview, isEditing);
+    useSliderRefresh(sliderData, component, syncedUpdateComponent, preview, isEditing);
 
   useEffect(() => {
     setSliderData(component._mave);
@@ -76,6 +93,23 @@ const SliderComponent = ({
       setSliderConfig((prev) => ({ ...prev, ...component._mave.config }));
     }
   }, [component._mave]);
+
+  useEffect(() => {
+    if (!pendingAutoSaveRef.current || !pageData?.id) return;
+    pendingAutoSaveRef.current = false;
+
+    (async () => {
+      try {
+        const response = await instance.put(`/pages/${pageData.id}`, pageData);
+        if (response.status === 200) {
+          dispatch(setIsDirty(false));
+          dispatch(setLastSaved(new Date().toISOString()));
+        }
+      } catch (err) {
+        console.error("Failed to auto-save synced slider data:", err);
+      }
+    })();
+  }, [pageData, dispatch]);
 
   const handleSelectSlider = useCallback((selected) => {
     setSelectedSliderData(selected);
@@ -261,7 +295,7 @@ const SliderComponent = ({
         }}>
           <CheckOutlined style={{ fontSize: "0.72rem", color: "#22c55e" }} />
           <span style={{ fontSize: "0.72rem", color: "#15803d", fontWeight: 600 }}>
-            Slider updated from Sliders page — save to keep changes
+            Slider updated from Cards/Sliders library
           </span>
         </div>
       )}
