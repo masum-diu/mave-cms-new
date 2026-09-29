@@ -19,6 +19,7 @@ const UserList = ({
   onEdit,
   onDelete,
   fetchUsers,
+  roles: rolesProp,
 }) => {
   // const [users, setUsers] = useState([]);
   const [createUser, setCreateUser] = useState(false);
@@ -35,6 +36,22 @@ const UserList = ({
   const [userEdit, setUserEdit] = useState(false);
   const [editUserId, setEditUserId] = useState(null);
   const [modifiedUserData, setModifiedUserData] = useState({});
+  const [roles, setRoles] = useState(
+    Array.isArray(rolesProp) && rolesProp.length > 0
+      ? rolesProp
+      : [
+          { id: 1, name: "Admin", title: "Admin" },
+          { id: 2, name: "User", title: "User" },
+        ]
+  );
+
+  const getRoleLabel = (role) => role?.name || role?.title || `Role ${role?.id}`;
+
+  useEffect(() => {
+    if (Array.isArray(rolesProp) && rolesProp.length > 0) {
+      setRoles(rolesProp);
+    }
+  }, [rolesProp]);
 
   useEffect(() => {
     // Check if passwords match and update state
@@ -42,8 +59,27 @@ const UserList = ({
   }, [password, confirmPassword]);
 
   useEffect(() => {
-    fetchUsers();
+    fetchUsers?.();
   }, []);
+
+  useEffect(() => {
+    if (Array.isArray(rolesProp) && rolesProp.length > 0) return undefined;
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const response = await instance.get("/roles");
+        if (!cancelled && Array.isArray(response.data) && response.data.length) {
+          setRoles(response.data);
+        }
+      } catch (_) {
+        // keep defaults
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [rolesProp]);
 
   const handleChange = (e, inputName) => {
     switch (inputName) {
@@ -246,7 +282,7 @@ const UserList = ({
                     {userEdit && user?.id == editUserId ? (
                       <Select
                         defaultValue={
-                          roles2.find((role) => role.id == user?.role_id)?.id
+                          roles.find((role) => role.id == user?.role_id)?.id
                         }
                         onChange={(value) =>
                           handleUserInputChange("role_id", value)
@@ -254,14 +290,17 @@ const UserList = ({
                         style={{ width: "100%" }}
                         showSearch
                       >
-                        {roles2?.map((role) => (
+                        {roles?.map((role) => (
                           <Select.Option value={role.id} key={role.id}>
-                            {role.name}
+                            {getRoleLabel(role)}
                           </Select.Option>
                         ))}
                       </Select>
                     ) : user?.role_id ? (
-                      roles2.find((role) => role.id == user?.role_id)?.name
+                      (() => {
+                        const role = roles.find((r) => r.id == user?.role_id);
+                        return role ? getRoleLabel(role) : "Guest";
+                      })()
                     ) : (
                       "Guest"
                     )}

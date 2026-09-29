@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import instance from "../../../axios";
 import UsersTopbar from "../../../components/settings/user/UsersTopbar";
 import UserTable from "../../../components/settings/userv2/UserTable";
+import { useAuth } from "../../../src/context/AuthContext";
 
 const initialLogs = [
   {
@@ -25,6 +26,7 @@ const initialLogs = [
 
 export default function usersSettingsPage() {
   const router = useRouter();
+  const { user: authUser } = useAuth();
   const [users, setUsers] = useState();
   const [roles, setRoles] = useState([]);
   const [currentUser, setCurrentUser] = useState(null);
@@ -58,19 +60,22 @@ export default function usersSettingsPage() {
     },
   ];
 
-  // Get current user from localStorage
+  // Prefer AuthContext user (includes role_mave); fall back to localStorage
   useEffect(() => {
+    if (authUser) {
+      setCurrentUser(authUser);
+      return;
+    }
     const userStr = localStorage.getItem("user");
     if (userStr) {
       try {
-        const user = JSON.parse(userStr);
-        setCurrentUser(user);
+        setCurrentUser(JSON.parse(userStr));
       } catch (error) {
         console.error("Error parsing user from localStorage:", error);
         message.error("Error loading user data");
       }
     }
-  }, []);
+  }, [authUser]);
 
   useEffect(() => {
     if (router.pathname === "/settings/users-settings") {
@@ -161,7 +166,7 @@ export default function usersSettingsPage() {
   }
 
   return (
-    <div className="mavecontainer">
+    <div className="mavecontainer" style={{ paddingTop: 24 }}>
       <UsersTopbar
         menuItems={menuItems}
         active={active}

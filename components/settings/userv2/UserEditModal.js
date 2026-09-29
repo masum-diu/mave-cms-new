@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Modal, Form, Input, Button, Upload, Select, message } from "antd";
 import { UploadOutlined } from "@ant-design/icons";
 import instance from "../../../axios";
+import { isAdminRole, canManageUsers, unwrapRoleId, formatRoleIdForApi } from "../../../utils/roles";
 
 const { Option } = Select;
 
@@ -17,10 +18,9 @@ const UserEditModal = ({
   const [avatar, setAvatar] = useState(user?.profile_picture);
   const [loading, setLoading] = useState(false);
 
-  // Check permissions
-  const isAdmin = currentUser?.role_id === "1";
+  const isAdmin = canManageUsers(currentUser);
   const isEditingSelf = currentUser?.id === user?.id;
-  const isEditingAdmin = user?.role_id === "1";
+  const isEditingAdmin = isAdminRole(user?.role_id) || canManageUsers(user);
 
   // Determine if the current user can edit this user
   const canEdit = isAdmin || isEditingSelf; // Admin can edit anyone, users can edit themselves
@@ -33,11 +33,12 @@ const UserEditModal = ({
     }
 
     if (user) {
+      const roleId = unwrapRoleId(user.role_id);
       form.setFieldsValue({
         name: user.name,
         email: user.email,
         phone: user.phone,
-        role_id: user.role_id ? parseInt(user.role_id) : undefined,
+        role_id: roleId != null ? Number(roleId) || roleId : undefined,
       });
       setAvatar(user.profile_picture);
     }
@@ -56,10 +57,13 @@ const UserEditModal = ({
     try {
       setLoading(true);
 
+      const nextRoleId = unwrapRoleId(values.role_id);
+      const prevRoleId = unwrapRoleId(user.role_id);
+
       // Only check role change permissions if the role is being changed
-      if (values.role_id !== user.role_id) {
+      if (String(nextRoleId) !== String(prevRoleId)) {
         // Prevent changing role to admin
-        if (values.role_id === 1 || values.role_id === "1") {
+        if (isAdminRole(nextRoleId)) {
           message.error("You don't have permission to create admin users");
           return;
         }
@@ -73,6 +77,7 @@ const UserEditModal = ({
 
       await instance.put(`/admin/user/${user.id}`, {
         ...values,
+        role_id: formatRoleIdForApi(nextRoleId),
         profile_picture: avatar,
       });
       message.success("User updated successfully");
@@ -138,10 +143,10 @@ const UserEditModal = ({
         <Form.Item name="role_id" label="Role">
           <Select
             disabled={isEditingSelf || isEditingAdmin}
-            allowClear={!isEditingSelf}
+            allowClear={false}
           >
-            <Option value="2">User</Option>
-            {isEditingAdmin && <Option value="1">Admin</Option>}
+            <Option value={2}>User</Option>
+            {isEditingAdmin && <Option value={1}>Admin</Option>}
           </Select>
         </Form.Item>
         <Form.Item label="Avatar">

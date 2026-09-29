@@ -2,6 +2,7 @@ import { PlusCircleOutlined, UserSwitchOutlined } from "@ant-design/icons";
 import { Button } from "antd";
 import Link from "next/link";
 import UserForm from "./UserForm";
+import { canManageUsers } from "../../../utils/roles";
 
 export default function UsersTopbar({
   menuItems,
@@ -12,8 +13,7 @@ export default function UsersTopbar({
   roles,
   currentUser,
 }) {
-  // Check if user has permission to create users
-  const canCreateUser = currentUser?.role_id === "1";
+  const canCreateUser = canManageUsers(currentUser);
 
   return (
     <div
@@ -23,6 +23,8 @@ export default function UsersTopbar({
         gridTemplateColumns: "2fr 6fr 1fr",
         alignItems: "center",
         borderBottom: "4px solid #f0f0f0",
+        paddingTop: 8,
+        marginBottom: 16,
       }}
     >
       <div
@@ -85,7 +87,7 @@ export default function UsersTopbar({
           gap: 10,
         }}
       >
-        {canCreateUser && (
+        {canCreateUser ? (
           <Button
             type="primary"
             style={{
@@ -95,11 +97,10 @@ export default function UsersTopbar({
             }}
             icon={<PlusCircleOutlined />}
             onClick={() => setCreateUser(true)}
-            disabled={active !== "1"}
           >
             Add User
           </Button>
-        )}
+        ) : null}
         {createUser && (
           <UserForm
             visible={createUser}

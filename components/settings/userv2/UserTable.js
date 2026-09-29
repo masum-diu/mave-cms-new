@@ -17,6 +17,7 @@ import UserEditModal from "./UserEditModal";
 import UserViewModal from "./UserViewModal";
 import FilterDrawer from "./FilterDrawer";
 import instance from "../../../axios";
+import { getRoleLabel, isAdminRole, canManageUsers } from "../../../utils/roles";
 
 const { Option } = Select;
 
@@ -33,8 +34,7 @@ const UserTable = ({ users, fetchUsers, roles, currentUser }) => {
     setFilteredUsers(users);
   }, [users]);
 
-  // Check permissions
-  const isAdmin = currentUser?.role_id === "1";
+  const isAdmin = canManageUsers(currentUser);
 
   // Handle selection of all rows (not header)
   const handleSelectAll = () => {
@@ -79,14 +79,17 @@ const UserTable = ({ users, fetchUsers, roles, currentUser }) => {
   const handleDeleteUser = async (id) => {
     const targetUser = users.find((u) => u.id === id);
 
-    // Prevent deleting admin users
-    if (targetUser?.role_id === "1") {
+    // Only block primary Admin (role_id 1). Created Users must be deletable.
+    if (isAdminRole(targetUser?.role_id)) {
       message.error("You cannot delete admin users");
       return;
     }
 
     // Prevent deleting own account
-    if (targetUser?.id === currentUser?.id) {
+    if (
+      targetUser?.id === currentUser?.id ||
+      String(targetUser?.id) === String(currentUser?.id)
+    ) {
       message.error("You cannot delete your own account");
       return;
     }
@@ -96,20 +99,29 @@ const UserTable = ({ users, fetchUsers, roles, currentUser }) => {
       message.success("User deleted successfully");
       fetchUsers();
     } catch (error) {
-      message.error("Failed to delete user");
+      message.error(
+        error.response?.data?.message || "Failed to delete user"
+      );
     }
   };
 
   // Handle bulk delete
   const handleBulkDelete = async () => {
-    // Prevent deleting if any selected user is an admin
     const hasAdmin = selectedRowKeys.some((id) => {
       const user = users.find((u) => u.id === id);
-      return user?.role_id === "1";
+      return isAdminRole(user?.role_id);
     });
 
     if (hasAdmin) {
       message.error("You cannot delete admin users");
+      return;
+    }
+
+    const hasSelf = selectedRowKeys.some(
+      (id) => String(id) === String(currentUser?.id)
+    );
+    if (hasSelf) {
+      message.error("You cannot delete your own account");
       return;
     }
 
@@ -119,9 +131,11 @@ const UserTable = ({ users, fetchUsers, roles, currentUser }) => {
       );
       message.success("Selected users deleted successfully");
       fetchUsers();
-      setSelectedRowKeys([]); // Clear selection after delete
+      setSelectedRowKeys([]);
     } catch (error) {
-      message.error("Failed to delete selected users");
+      message.error(
+        error.response?.data?.message || "Failed to delete selected users"
+      );
     }
   };
 
@@ -165,23 +179,17 @@ const UserTable = ({ users, fetchUsers, roles, currentUser }) => {
       title: "Role",
       dataIndex: "role_id",
       key: "role",
-      render: (role_id) => {
-        switch (role_id) {
-          case "1":
-            return "Admin";
-          case "2":
-            return "User";
-          default:
-            return "N/A";
-        }
-      },
+      render: (role_id) => getRoleLabel(role_id, roles),
     },
     {
       title: "Actions",
       key: "actions",
       render: (_, record) => {
-        const isSelf = record.id === currentUser?.id;
-        const isTargetAdmin = record.role_id === "1";
+        const isSelf =
+          record.id === currentUser?.id ||
+          String(record.id) === String(currentUser?.id);
+        // Only role_id 1 is protected; created Users (role_id 2) can be deleted
+        const isTargetAdmin = isAdminRole(record.role_id);
         const canEdit = isAdmin && (!isTargetAdmin || isSelf);
         const canDelete = isAdmin && !isTargetAdmin && !isSelf;
 
@@ -262,7 +270,7 @@ const UserTable = ({ users, fetchUsers, roles, currentUser }) => {
             user={selectedUser}
             onCancel={() => setIsViewModalVisible(false)}
             onEdit={() => handleEditUser(selectedUser)}
-            currentUser={currentUser}
+            roles={roles}
           />
           <FilterDrawer
             visible={isFilterDrawerVisible}
