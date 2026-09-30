@@ -60,6 +60,14 @@ const PageCard = ({
 
   const confirmEdit = (data) => { handleEditPageInfo(data); setIsEditing(false); };
 
+  const openPreview = () => {
+    if (typeof handlePreviewPage === "function") {
+      handlePreviewPage(page.id);
+      return;
+    }
+    router.push(`/page-preview/${page.id}`);
+  };
+
   return (
     <div style={{
       background: "#fff", borderRadius: 14,
@@ -138,7 +146,7 @@ const PageCard = ({
           {/* Preview */}
           <button
             type="button"
-            onClick={() => handlePreviewPage(page.id)}
+            onClick={openPreview}
             style={{
               display: "flex", alignItems: "center", justifyContent: "center",
               width: 32, height: 32, borderRadius: 8,
@@ -182,7 +190,7 @@ const PageCard = ({
                 paddingTop: 14, borderTop: "1px solid #f3f4f6",
                 flexWrap: "wrap",
               }}>
-                <ActionBtn icon={<EyeOutlined />}   label="Preview"   onClick={() => handlePreviewPage(page.id)} />
+                <ActionBtn icon={<EyeOutlined />}   label="Preview"   onClick={openPreview} />
                 <ActionBtn icon={<EditOutlined />}  label="Edit Info" onClick={() => setIsEditing(true)} />
                 <ActionBtn icon={<CopyOutlined />}  label="Duplicate" onClick={() => handleDuplicatePage(page.id)} />
                 <Popconfirm

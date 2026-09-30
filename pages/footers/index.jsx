@@ -86,6 +86,10 @@ const Footers = () => {
     router.push(`/page-builder/${id}`);
   };
 
+  const handlePreviewFooter = (id) => {
+    router.push(`/page-preview/${id}`);
+  };
+
   const handleEditFooterInfo = async (updatedData) => {
     try {
       const response = await instance.put(`/pages/${updatedData.id}`, {
@@ -186,6 +190,7 @@ const Footers = () => {
       <RenderPages
         webpages={footers.slice(0, itemsPerPage)}
         handleEditPage={handleEditFooter}
+        handlePreviewPage={handlePreviewFooter}
         handleExpand={handleExpand}
         expandedPageId={expandedPageId}
         handleDeletePage={handleDeleteFooter}
