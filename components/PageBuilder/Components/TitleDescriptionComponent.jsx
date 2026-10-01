@@ -97,8 +97,10 @@ const TitleDescriptionComponent = ({
     fetchPages();
   }, []);
 
-  // On mount or whenever component changes, sync local state
+  // Sync from saved component data. Skip while editing so a parent
+  // re-render does not replace the description under the cursor.
   useEffect(() => {
+    if (isEditing) return;
     if (component?._mave) {
       const {
         title = "",
@@ -143,7 +145,7 @@ const TitleDescriptionComponent = ({
         titleAlign,
       });
     }
-  }, [component]);
+  }, [component, isEditing]);
 
   // ---------------------
   //   HANDLERS
